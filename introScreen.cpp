@@ -1,19 +1,29 @@
 #include "introScreen.h"
 #include <iostream>
 
-IntroScreen::IntroScreen() {
+IntroScreen::IntroScreen(sf::RenderWindow& window) {
     // Load font
     if (!font.loadFromFile("arial.ttf")) {
         std::cerr << "Failed to load font!\n";
     }
 
     // Load background image
-    if (!backgroundTexture.loadFromFile("images/bg-introScreen.jpg")) {
+    if (!backgroundTexture.loadFromFile("images/bg-introScreen.png")) {
         std::cerr << "Failed to load background image!\n";
     } else {
         background.setTexture(backgroundTexture);
     }
 
+    sf::Vector2u windowSize = window.getSize();
+
+    // Scale background to fit window
+    sf::Vector2u imageSize = backgroundTexture.getSize();
+    float scaleX = float(windowSize.x) / imageSize.x;
+    float scaleY = float(windowSize.y) / imageSize.y;
+    background.setScale(scaleX, scaleY);
+
+    // Position title
+    title.setPosition(windowSize.x / 2.f - title.getLocalBounds().width / 2.f, 100);
     // Title
     title.setFont(font);
     title.setString("City Navigator");

@@ -6,8 +6,8 @@
 int main()
 {
     // Create a window
-    sf::RenderWindow window(sf::VideoMode(1280, 720), "City Navigator", sf::Style::Titlebar | sf::Style::Close);
-    IntroScreen intro;      // Create intro screen object
+    sf::RenderWindow window(sf::VideoMode(1200, 720), "City Navigator", sf::Style::Titlebar | sf::Style::Close);
+    IntroScreen intro(window);      // Create intro screen object
     intro.show(window);     // Show intro screen
     // Main game loop
     while (window.isOpen()) {

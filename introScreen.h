@@ -17,6 +17,6 @@ private:
     sf::Sprite background;
 
 public:
-    IntroScreen();
+    IntroScreen(sf::RenderWindow& window);
     void show(sf::RenderWindow& window);
 };
