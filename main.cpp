@@ -1,4 +1,5 @@
-//use this to compile: main.cpp introScreen.cpp -o City-Navigator.exe -I"C:/SFML-2.6.1/include" -L"C:/SFML-2.6.1/lib" -lsfml-graphics -lsfml-window -lsfml-system
+//use this to compile:
+//g++ main.cpp introScreen.cpp -o City-Navigator.exe -I"C:/SFML-2.6.1/include" -L"C:/SFML-2.6.1/lib" -lsfml-graphics -lsfml-window -lsfml-system
 
 #include <SFML/Graphics.hpp>
 #include "introScreen.h"

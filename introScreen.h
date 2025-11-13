@@ -16,6 +16,17 @@ private:
     sf::Texture backgroundTexture;
     sf::Sprite background;
 
+    bool showPopup;
+    sf::RectangleShape popupRect;
+    sf::RectangleShape closeButtonRect;
+    sf::Text closeButtonText;
+
+    sf::RectangleShape createCityButtonRect;
+    sf::Text createCityButtonText;
+
+    sf::RectangleShape navigateCityButtonRect;
+    sf::Text navigateCityButtonText;
+
 public:
     IntroScreen(sf::RenderWindow& window);
     void show(sf::RenderWindow& window);
