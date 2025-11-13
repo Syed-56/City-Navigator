@@ -1,5 +1,12 @@
 #include "introScreen.h"
+#include "sampleCity.h"
 #include <iostream>
+#include <SFML/System.hpp>
+
+bool transitionActive = false;
+bool navigatingCity = false;
+SampleCity city;
+sf::Clock transitionClock;
 
 IntroScreen::IntroScreen(sf::RenderWindow& window) {
     // Load font
@@ -129,83 +136,90 @@ void IntroScreen::show(sf::RenderWindow& window) {
             if (event.type == sf::Event::Closed)
                 window.close();
 
+            // Mouse hover
             else if (event.type == sf::Event::MouseMoved) {
                 sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-                if (startButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
-                    startButtonRect.setFillColor(sf::Color(80, 255, 80));
-                else
-                    startButtonRect.setFillColor(sf::Color(50, 200, 50));
+                startButtonRect.setFillColor(
+                    startButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)) ?
+                    sf::Color(80, 255, 80) : sf::Color(50, 200, 50));
 
-                if (exitButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
-                    exitButtonRect.setFillColor(sf::Color(255, 80, 80));
-                else
-                    exitButtonRect.setFillColor(sf::Color(200, 50, 50));
+                exitButtonRect.setFillColor(
+                    exitButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)) ?
+                    sf::Color(255, 80, 80) : sf::Color(200, 50, 50));
             }
 
+            // Mouse clicks
             else if (event.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-            
-                if (showPopup) {
-                    // Check close button
-                    if (closeButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
-                        showPopup = false; // close popup
-                    }
-                    // Create New City
-                    if (createCityButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
-                        std::cout << "Create New City clicked!\n";
-                        // TODO: Add logic for creating new city
-                    }
 
-                    // Navigate City
-                    if (navigateCityButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
+                if (showPopup) {
+                    if (closeButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
+                        showPopup = false;
+
+                    else if (createCityButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
+                        std::cout << "Create New City clicked!\n";
+
+                    else if (navigateCityButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
                         std::cout << "Navigate City clicked!\n";
-                        // TODO: Add logic for navigating city
+                        transitionActive = true;
+                        transitionClock.restart();
                     }
                 } else {
-                    // Start clicked
-                    if (startButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
-                        std::cout << "Start clicked!\n";
-                        showPopup = true; // show popup
-                    }
-            
-                    // Exit clicked
-                    if (exitButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
+                    if (startButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
+                        showPopup = true;
+                    else if (exitButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
                         window.close();
-                    }
                 }
             }
-            
+
+            // Pass events to city if navigating
+            if (navigatingCity)
+                city.handleEvent(event, navigatingCity); // sets navigatingCity = false if X clicked
         }
 
         window.clear();
-        window.draw(background);
-        window.draw(title);
-        window.draw(startButtonRect);
-        window.draw(startButtonText);
-        window.draw(exitButtonRect);
-        window.draw(exitButtonText);
 
-        if (showPopup) {
-            // Optional dim overlay
-            sf::RectangleShape overlay(sf::Vector2f(windowSize.x, windowSize.y));
-            overlay.setFillColor(sf::Color(0, 0, 0, 100));
-            window.draw(overlay);
-        
-            // Draw popup
-            window.draw(popupRect);
-        
-            // Draw close button on top
-            window.draw(closeButtonRect);
-            window.draw(closeButtonText);
+        if (navigatingCity) {
+            if (!navigatingCity) continue; // return to intro screen immediately
+            // Draw city
+            city.draw(window);
+        } else {
+            // Draw intro screen
+            window.draw(background);
+            window.draw(title);
+            window.draw(startButtonRect);
+            window.draw(startButtonText);
+            window.draw(exitButtonRect);
+            window.draw(exitButtonText);
 
-            // Draw popup buttons
-            window.draw(createCityButtonRect);
-            window.draw(createCityButtonText);
+            if (showPopup) {
+                sf::RectangleShape overlay(sf::Vector2f(windowSize.x, windowSize.y));
+                overlay.setFillColor(sf::Color(0, 0, 0, 100));
+                window.draw(overlay);
 
-            window.draw(navigateCityButtonRect);
-            window.draw(navigateCityButtonText);
+                window.draw(popupRect);
+                window.draw(closeButtonRect);
+                window.draw(closeButtonText);
+                window.draw(createCityButtonRect);
+                window.draw(createCityButtonText);
+                window.draw(navigateCityButtonRect);
+                window.draw(navigateCityButtonText);
+            }
+
+            if (transitionActive) {
+                sf::Text loadingText("Loading City...", font, 40);
+                loadingText.setFillColor(sf::Color::White);
+                loadingText.setPosition(windowSize.x/2.f - loadingText.getLocalBounds().width/2.f,
+                                        windowSize.y/2.f - loadingText.getLocalBounds().height/2.f);
+                window.draw(loadingText);
+
+                if (transitionClock.getElapsedTime().asSeconds() >= 1.0f) {
+                    transitionActive = false;
+                    navigatingCity = true;
+                }
+            }
         }
-        
+
         window.display();
     }
 }
