@@ -1,21 +1,43 @@
 #pragma once
-
-#include <string>
-#include <vector>
 #include <SFML/Graphics.hpp>
+#include <vector>
+#include <map>
+#include <string>
 
-// sampleCity.h
+struct Location {
+    std::string name;       // e.g., "Educators"
+    std::string type;       // e.g., "School" (for texture mapping)
+    float x, y;
+    std::vector<int> neighbors;
+    sf::Sprite sprite;      // Sprite for icon
+};
+
 class SampleCity {
-    private:
-    sf::RectangleShape closeButton;
-    sf::Font font;
-    sf::Text closeText;
+public:
+    SampleCity();
 
-    public:
-        struct Location { std::string name; float x, y; std::vector<int> neighbors; };
-        std::vector<Location> locations;
+    void handleEvent(sf::Event& event, bool& returnToMenu);
+    void draw(sf::RenderWindow& window);
+    void update(sf::RenderWindow& window); // Add update method for hover
+
+    // Graph utilities
+    const std::vector<int>& getNeighbors(int index) const;
+    int findLocationByName(const std::string& name) const;
+
+private:
+    std::vector<Location> locations;
+    std::map<int, std::vector<int>> adjacencyList;
+
+    sf::RectangleShape closeButton;
+    sf::Text closeText;
+    sf::Font font;
     
-        SampleCity(); // constructor to initialize city
-        void draw(sf::RenderWindow &window); // render the city
-        void handleEvent(sf::Event &event, bool &returnToMenu);
-};    
+    // Hover functionality
+    int hoveredLocation;
+    sf::Text hoverText;
+    sf::RectangleShape hoverBackground;
+};
+
+// Global texture map
+extern std::map<std::string, sf::Texture> buildingTextures;
+void loadBuildingTextures(); // Call this before creating SampleCity
