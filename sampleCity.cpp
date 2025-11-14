@@ -1,5 +1,6 @@
 #include "sampleCity.h"
 #include <iostream>
+#include <math.h>
 
 // Global texture map
 std::map<std::string, sf::Texture> buildingTextures;
@@ -23,7 +24,7 @@ void loadBuildingTextures() {
     }
 }
 
-SampleCity::SampleCity() : hoveredLocation(-1) {
+SampleCity::SampleCity() {
     // Load font
     if (!font.loadFromFile("arial.ttf")) {
         std::cerr << "Failed to load font!\n";
@@ -40,45 +41,105 @@ SampleCity::SampleCity() : hoveredLocation(-1) {
     closeText.setFillColor(sf::Color::White);
     closeText.setPosition(20, 12);
 
-    // Hover text setup
-    hoverText.setFont(font);
-    hoverText.setCharacterSize(16);
-    hoverText.setFillColor(sf::Color::White);
-    
-    hoverBackground.setFillColor(sf::Color(0, 0, 0, 180));
-    hoverBackground.setOutlineThickness(1);
-    hoverBackground.setOutlineColor(sf::Color::White);
+        // ==== ORGANIZED CITY MAP (OPTION A) ====
 
-    // Locations - using custom names
-    Location park{"Central Park", "Park", 100, 100, {1, 2}};
-    park.sprite.setTexture(buildingTextures[park.type]);
-    park.sprite.setPosition(park.x - 16, park.y - 16);
-    locations.push_back(park);
+    // Predefined building types
+    std::vector<std::string> types = {
+        "Park", "School", "Market", "Office", "Hospital", "Apartment"
+    };
 
-    Location school{"Educators Academy", "School", 300, 100, {0, 2}};
-    school.sprite.setTexture(buildingTextures[school.type]);
-    school.sprite.setPosition(school.x - 16, school.y - 16);
-    locations.push_back(school);
+    // Clear old locations just to be safe
+    locations.clear();
+    adjacencyList.clear();
 
-    Location market{"Fresh Market", "Market", 200, 300, {0, 1}};
-    market.sprite.setTexture(buildingTextures[market.type]);
-    market.sprite.setPosition(market.x - 16, market.y - 16);
-    locations.push_back(market);
+    // Helper lambda to add locations easily
+    auto addLocation = [&](std::string name, std::string type, int x, int y) {
+        Location loc;
+        loc.name = name;
+        loc.type = type;
+        loc.x = x;
+        loc.y = y;
 
-    Location hospital{"City General Hospital", "Hospital", 500, 200, {4}};
-    hospital.sprite.setTexture(buildingTextures[hospital.type]);
-    hospital.sprite.setPosition(hospital.x - 16, hospital.y - 16);
-    locations.push_back(hospital);
+        loc.sprite.setTexture(buildingTextures[type]);
+        loc.sprite.setPosition(x - 16, y - 16);
 
-    Location apartments{"Skyline Apartments", "Apartment", 400, 400, {3}};
-    apartments.sprite.setTexture(buildingTextures[apartments.type]);
-    apartments.sprite.setPosition(apartments.x - 16, apartments.y - 16);
-    locations.push_back(apartments);
+        locations.push_back(loc);
+    };
 
-    // Build adjacency list
-    for (size_t i = 0; i < locations.size(); i++) {
+    // ------- DISTRICT 1: PARKS (LEFT) -------
+    addLocation("Greenwood Park", "Park", 150, 150);
+    addLocation("Maple Garden",  "Park", 150, 260);
+    addLocation("Playground Park", "Park", 150, 370);
+    addLocation("Sunset Park", "Park", 150, 480);
+    addLocation("Rose Park", "Park", 150, 590);
+
+    // ------- DISTRICT 2: SCHOOLS (TOP-LEFT) -------
+    addLocation("City School A", "School", 350, 120);
+    addLocation("City School B", "School", 450, 120);
+    addLocation("Bright Future School", "School", 550, 120);
+    addLocation("Educators Academy", "School", 650, 120);
+    addLocation("Beaconhouse", "School", 750, 120);
+
+    // ------- DISTRICT 3: MARKETS (CENTER) -------
+    addLocation("Central Market", "Market", 450, 300);
+    addLocation("Fresh Store", "Market", 550, 300);
+    addLocation("Daily Mart", "Market", 650, 300);
+    addLocation("Super Grocery", "Market", 750, 300);
+    addLocation("Trade Center", "Market", 850, 300);
+
+    // ------- DISTRICT 4: OFFICES (CENTER-RIGHT) -------
+    addLocation("Tech Hub", "Office", 950, 350);
+    addLocation("Finance Tower", "Office", 950, 450);
+    addLocation("Business Plaza", "Office", 950, 550);
+    addLocation("Corporate Center", "Office", 950, 650);
+
+    // ------- DISTRICT 5: HOSPITALS (TOP-RIGHT) -------
+    addLocation("General Hospital", "Hospital", 1100, 150);
+    addLocation("City Emergency", "Hospital", 1100, 250);
+    addLocation("Heart Care Center", "Hospital", 1100, 350);
+    addLocation("Children Hospital", "Hospital", 1100, 450);
+    addLocation("Medical Diagnostics", "Hospital", 1100, 550);
+
+    // ------- DISTRICT 6: APARTMENTS (BOTTOM AREA) -------
+    addLocation("Skyline Apartments", "Apartment", 500, 400);
+    addLocation("Sunrise Apartments", "Apartment", 600, 400);
+    addLocation("Lifestyle Residency", "Apartment", 700, 400);
+    addLocation("Green Villas", "Apartment", 800, 400);
+    addLocation("Golden Heights", "Apartment", 900, 400);
+
+    // ------- Add more apartments to reach 50 -------
+    addLocation("City Homes A", "Apartment", 300, 500);
+    addLocation("City Homes B", "Apartment", 400, 500);
+    addLocation("City Homes C", "Apartment", 500, 500);
+    addLocation("City Homes D", "Apartment", 600, 500);
+    addLocation("City Homes E", "Apartment", 700, 500);
+
+    addLocation("Elite Residency A", "Apartment", 300, 600);
+    addLocation("Elite Residency B", "Apartment", 400, 600);
+    addLocation("Elite Residency C", "Apartment", 500, 600);
+    addLocation("Elite Residency D", "Apartment", 600, 600);
+    addLocation("Elite Residency E", "Apartment", 700, 600);
+
+    // ------- Automatic Adjacency Connections -------
+    for (int i = 0; i < locations.size(); i++) {
+        // Connect each location with nearby ones (<200 px distance)
+        for (int j = 0; j < locations.size(); j++) {
+            if (i == j) continue;
+
+            float dx = locations[i].x - locations[j].x;
+            float dy = locations[i].y - locations[j].y;
+            float dist = sqrt(dx*dx + dy*dy);
+
+            if (dist < 220)  // threshold for "road"
+                locations[i].neighbors.push_back(j);
+        }
+    }
+
+    // Build adjacencyList
+    for (int i = 0; i < locations.size(); i++) {
         adjacencyList[i] = locations[i].neighbors;
     }
+
 }
 
 void SampleCity::handleEvent(sf::Event& event, bool& returnToMenu) {
@@ -94,11 +155,10 @@ void SampleCity::update(sf::RenderWindow& window) {
     // Check mouse position for hover
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     hoveredLocation = -1;
-    
+
     for (size_t i = 0; i < locations.size(); i++) {
-        // Check if mouse is over the sprite (with some padding)
         sf::FloatRect bounds = locations[i].sprite.getGlobalBounds();
-        if (bounds.contains(static_cast<sf::Vector2f>(mousePos))) {
+        if (bounds.contains((sf::Vector2f)mousePos)) {
             hoveredLocation = i;
             break;
         }
@@ -124,32 +184,41 @@ void SampleCity::draw(sf::RenderWindow& window) {
         window.draw(loc.sprite);
     }
 
-    // Draw hover text if hovering over a location
-    if (hoveredLocation != -1) {
-        const Location& loc = locations[hoveredLocation];
-        
-        // Set hover text
-        hoverText.setString(loc.name);
-        
-        // Position text above the sprite
-        sf::FloatRect textBounds = hoverText.getLocalBounds();
-        float textX = loc.x - textBounds.width / 2;
-        float textY = loc.y - 40; // Position above the icon
-        
-        hoverText.setPosition(textX, textY);
-        
-        // Create background for text
-        float padding = 5.0f;
-        hoverBackground.setSize(sf::Vector2f(textBounds.width + padding * 2, textBounds.height + padding * 2));
-        hoverBackground.setPosition(textX - padding, textY - padding);
-        
-        window.draw(hoverBackground);
-        window.draw(hoverText);
-    }
-
     // Draw close button
     window.draw(closeButton);
     window.draw(closeText);
+
+    if (hoveredLocation != -1) {
+        sf::Text label;
+        label.setFont(font);
+        label.setString(locations[hoveredLocation].name);
+        label.setCharacterSize(10);
+        label.setFillColor(sf::Color::Black);
+    
+        // Position text on the LEFT of the icon
+        float offsetX = -20; // space to the left
+        float offsetY = -30; // above the icon
+    
+        // Calculate width to shift background correctly
+        sf::FloatRect bounds = label.getLocalBounds();
+        label.setPosition(
+            locations[hoveredLocation].x + offsetX - bounds.width, // shift left by text width
+            locations[hoveredLocation].y + offsetY
+        );
+    
+        // Create background box
+        sf::RectangleShape bg;
+        bg.setSize(sf::Vector2f(bounds.width + 10, bounds.height + 10));
+        bg.setFillColor(sf::Color(255, 255, 255, 220)); // white, slightly transparent
+        bg.setPosition(label.getPosition().x - 5, label.getPosition().y - 5);
+        bg.setOutlineColor(sf::Color::Black);
+        bg.setOutlineThickness(1);
+    
+        // Draw background then text
+        window.draw(bg);
+        window.draw(label);
+    }
+    
 }
 
 // Graph utilities
