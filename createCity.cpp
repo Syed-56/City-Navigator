@@ -1,4 +1,6 @@
 #include "createCity.h"
+#include <vector>
+#include <utility>
 
 bool loadFontRobust(sf::Font& font) {
     if (font.loadFromFile("arial.ttf")) return true;
@@ -233,6 +235,7 @@ void createCity(sf::RenderWindow& window) {
 
     // For timing delta
     sf::Clock clock;
+    std::vector<std::pair<float, float>> occupiedLocs;
 
     // main loop
     while (window.isOpen()) {
@@ -248,6 +251,7 @@ void createCity(sf::RenderWindow& window) {
         }
         sf::Event ev;
         while (window.pollEvent(ev)) {
+            bool dropdownClickConsumed = false;
             if (ev.type == sf::Event::Closed) window.close();
 
             // Keyboard: text input for add popup
@@ -386,44 +390,59 @@ void createCity(sf::RenderWindow& window) {
                             break;   // IMPORTANT: stop processing Submit
                         }
 
-                        Location loc;
-                        loc.id = graph.nodes.size();
-                        loc.name = inputName.empty() ? ("Loc" + std::to_string(loc.id)) : inputName;
-                        loc.type = buildingTypes[typeIndex];
-                        loc.pos = { xx, yy };
-                        loc.active = true;
-                        int newId = graph.addNode(loc);
+                        bool canPlace = true;  // assume we can place
 
-                        // Create structured action and push to undo stack
-                        auto act = std::make_shared<Action>(ActKind::AddNode);
-                        act->nodeSnapshot = loc;         // snapshot so we can restore on redo
-                        std::ostringstream ds;
-                        ds << "Added: " << loc.type << " '" << loc.name << "' at (" << (int)xx << "," << (int)yy << ")";
-                        act->description = ds.str();
-                        undoStack.push(act);
-                        // New action invalidates redo stack
-                        redoStack.clear();
-
-                        // One-time rule: if graph now has exactly 1 node, show the modal and DO NOT open connect popup.
-                        if (graph.nodes.size() == 1 && !firstNodeNoticeShownAlready) {
-                            firstNodeNoticePending = true; // will be shown below in render
-                            firstNodeNoticeShownAlready = true;
-                            showConnectPopup = false;
-                        }
-                        else {
-                            // Normal: open connect popup for the newly added node
-                            showConnectPopup = true;
-                            connectA = newId;
-                            connectB = -1;
+                        for (int i = 0; i < occupiedLocs.size(); i++) {
+                            if (abs(occupiedLocs[i].first - xx) < 50 && abs(occupiedLocs[i].second - yy) < 50) {
+                                std::cout << "Location too close to an existing one\n";
+                                canPlace = false; // prevent placement
+                                break;
+                            }
                         }
 
-                        // Reset add popup fields/state
-                        showAddPopup = false;
-                        typeDropdownOpen = false;
-                        typingName = typingX = typingY = false;
-                        inputName = "";
-                        inputX = inputY = "200";
-                        typeIndex = 0;
+                        // push only if location is valid
+                        if (canPlace) {
+                            occupiedLocs.push_back({xx, yy});
+                            Location loc;
+                            loc.id = graph.nodes.size();
+                            loc.name = inputName.empty() ? ("Loc" + std::to_string(loc.id)) : inputName;
+                            loc.type = buildingTypes[typeIndex];
+                            loc.pos = { xx, yy };
+                            loc.active = true;
+                            int newId = graph.addNode(loc);
+
+                            // Create structured action and push to undo stack
+                            auto act = std::make_shared<Action>(ActKind::AddNode);
+                            act->nodeSnapshot = loc;         // snapshot so we can restore on redo
+                            std::ostringstream ds;
+                            ds << "Added: " << loc.type << " '" << loc.name << "' at (" << (int)xx << "," << (int)yy << ")";
+                            act->description = ds.str();
+                            undoStack.push(act);
+                            // New action invalidates redo stack
+                            redoStack.clear();
+
+                            // One-time rule: if graph now has exactly 1 node, show the modal and DO NOT open connect popup.
+                            if (graph.nodes.size() == 1 && !firstNodeNoticeShownAlready) {
+                                firstNodeNoticePending = true; // will be shown below in render
+                                firstNodeNoticeShownAlready = true;
+                                showConnectPopup = false;
+                            }
+                            else {
+                                // Normal: open connect popup for the newly added node
+                                showConnectPopup = true;
+                                connectA = newId;
+                                connectB = -1;
+                            }
+
+                            // Reset add popup fields/state
+                            showAddPopup = false;
+                            typeDropdownOpen = false;
+                            typingName = typingX = typingY = false;
+                            inputName = "";
+                            inputX = inputY = "200";
+                            typeIndex = 0;
+                        }
+
                     }
                     // Cancel
                     else if (cancelBtn.getGlobalBounds().contains(mouseScreen)) {
@@ -710,7 +729,7 @@ void createCity(sf::RenderWindow& window) {
         window.draw(plusText);
 
         // Instructions
-        sf::Text instr("Click '+' to add | Click a node to connect | Middle-drag to pan | H to toggle history", font, 14);
+        sf::Text instr("Click '+' to add", font, 24);
         instr.setFillColor(sf::Color::Black);
         float padding = 10.f; // spacing between buttons
         instr.setPosition(
@@ -807,39 +826,68 @@ void createCity(sf::RenderWindow& window) {
             sf::Text sT("Submit", font, 16); sT.setFillColor(sf::Color::Black); sT.setPosition(submitBtn.getPosition().x + 14.f, submitBtn.getPosition().y + 6.f); window.draw(sT);
             sf::Text cT("Cancel", font, 16); cT.setFillColor(sf::Color::Black); cT.setPosition(cancelBtn.getPosition().x + 20.f, cancelBtn.getPosition().y + 6.f); window.draw(cT);
         } // end showAddPopup
-
-        bool dropdownClickConsumed = false;
+        
+        static std::string selectedType = "";  // persists across frames
+        static int dropDownIndex = 0;
+        static bool keyPressed = false;
         if (typeDropdownOpen) {
             float itemH = 28.f;
+            sf::Vector2f dropdownPos(pb.x + 20.f, pb.y + 50.f);
             sf::RectangleShape typeRect(sf::Vector2f(200.f, 30.f));
-            typeRect.setPosition(pb.x + 20.f, pb.y + 50.f);
+            typeRect.setPosition(dropdownPos);
+        
+            // Background for dropdown items
             sf::RectangleShape dropBg(sf::Vector2f(typeRect.getSize().x, itemH * (float)buildingTypes.size()));
-            dropBg.setPosition(typeRect.getPosition().x, typeRect.getPosition().y + typeRect.getSize().y);
+            dropBg.setPosition(dropdownPos.x, dropdownPos.y + typeRect.getSize().y);
             dropBg.setFillColor(sf::Color(245, 245, 245));
             dropBg.setOutlineColor(sf::Color::Black);
             dropBg.setOutlineThickness(1.f);
             window.draw(dropBg);
-
-            // Draw each item (with hover detection)
+        
+            // --- Handle keyboard input ---
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && !keyPressed) {
+                dropDownIndex++;
+                if (dropDownIndex >= buildingTypes.size()) dropDownIndex = buildingTypes.size() - 1;
+                keyPressed = true;
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) && !keyPressed) {
+                dropDownIndex--;
+                if (dropDownIndex < 0) dropDownIndex = 0;
+                keyPressed = true;
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) && !keyPressed) {
+                selectedType = buildingTypes[dropDownIndex]; // select option
+                typeDropdownOpen = false; // close dropdown
+                keyPressed = true;
+            }
+            else if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Down) &&
+                     !sf::Keyboard::isKeyPressed(sf::Keyboard::Up) &&
+                     !sf::Keyboard::isKeyPressed(sf::Keyboard::Enter)) {
+                keyPressed = false; // reset flag when no key pressed
+            }
+        
+            // --- Draw dropdown items ---
             for (int i = 0; i < (int)buildingTypes.size(); ++i) {
                 sf::RectangleShape itemRect(sf::Vector2f(typeRect.getSize().x, itemH));
                 itemRect.setPosition(dropBg.getPosition().x, dropBg.getPosition().y + i * itemH);
-                // hover detection using global mouse pos
-                sf::Vector2i mouseI = sf::Mouse::getPosition(window);
-                sf::Vector2f m((float)mouseI.x, (float)mouseI.y);
-                if (sf::FloatRect(itemRect.getPosition(), itemRect.getSize()).contains(m)) {
+        
+                // Highlight if keyboard selected
+                if (i == dropDownIndex) {
                     itemRect.setFillColor(sf::Color(200, 220, 255));
+                } else {
+                    itemRect.setFillColor(sf::Color::White);
                 }
-                else itemRect.setFillColor(sf::Color::White);
+        
                 window.draw(itemRect);
-
+        
                 sf::Text it(buildingTypes[i], font, 16);
                 it.setFillColor(sf::Color::Black);
                 it.setPosition(itemRect.getPosition().x + 8.f, itemRect.getPosition().y + 4.f);
                 window.draw(it);
-                
             }
+            typeIndex = dropDownIndex;
         }
+        
 
         // ---------------- Connect popup UI ----------------
         if (showConnectPopup) {
