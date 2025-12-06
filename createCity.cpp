@@ -374,6 +374,18 @@ void createCity(sf::RenderWindow& window) {
                         try { yy = std::stof(inputY); }
                         catch (...) { yy = 200.f; }
 
+                        // ---- BOUNDS CHECK HERE ----
+                        const float MIN_X = 15.f;
+                        const float MAX_X = 975.f;      // or ANY custom number
+                        const float MIN_Y = 15.f;
+                        const float MAX_Y = 700.f;
+
+                        if (xx < MIN_X || xx > MAX_X || yy < MIN_Y || yy > MAX_Y) {
+                            // show popup, print message, or ignore silently
+                            std::cout << "Coordinates out of bounds — node not added.\n";
+                            break;   // IMPORTANT: stop processing Submit
+                        }
+
                         Location loc;
                         loc.id = graph.nodes.size();
                         loc.name = inputName.empty() ? ("Loc" + std::to_string(loc.id)) : inputName;
@@ -595,15 +607,23 @@ void createCity(sf::RenderWindow& window) {
         sf::Vector2f viewTL = window.mapPixelToCoords({ 0,0 });
         sf::Vector2f viewBR = window.mapPixelToCoords({ (int)WINDOW_W,(int)WINDOW_H });
         sf::Vertex gridLine[2];
-        for (float x = std::floor(viewTL.x / gridSize) * gridSize - gridSize * 2; x <= viewBR.x + gridSize * 2; x += gridSize) {
-            gridLine[0] = sf::Vertex({ x, viewTL.y - gridSize}, sf::Color(190, 190, 190));
-            gridLine[1] = sf::Vertex({ x, viewBR.y + gridSize}, sf::Color(190, 190, 190));
-            window.draw(gridLine, 2, sf::Lines);
+        const float MAX_X = 1000.f;
+        const float MAX_Y = 700.f;
+
+        // Draw grid vertical lines
+        sf::Vertex vline[2];
+        for (float x = 0; x <= MAX_X; x += gridSize) {
+            vline[0] = sf::Vertex({ x, 0.f }, sf::Color(190,190,190));
+            vline[1] = sf::Vertex({ x, MAX_Y }, sf::Color(190,190,190));
+            window.draw(vline, 2, sf::Lines);
         }
-        for (float y = std::floor(viewTL.y / gridSize) * gridSize - gridSize * 2; y <= viewBR.y + gridSize * 2; y += gridSize) {
-            gridLine[0] = sf::Vertex({ viewTL.x - gridSize * 2, y }, sf::Color(190, 190, 190));
-            gridLine[1] = sf::Vertex({ viewBR.x + gridSize * 2, y }, sf::Color(190, 190, 190));
-            window.draw(gridLine, 2, sf::Lines);
+
+        // Draw grid horizontal lines
+        sf::Vertex hline[2];
+        for (float y = 0; y <= MAX_Y; y += gridSize) {
+            hline[0] = sf::Vertex({ 0.f, y }, sf::Color(190,190,190));
+            hline[1] = sf::Vertex({ MAX_X, y }, sf::Color(190,190,190));
+            window.draw(hline, 2, sf::Lines);
         }
 
         // Draw edges (only between active nodes)
@@ -641,9 +661,6 @@ void createCity(sf::RenderWindow& window) {
                 sprite.setTexture(it->second);
                 sprite.setOrigin(it->second.getSize().x / 2.f, it->second.getSize().y / 2.f);
                 sprite.setPosition(loc.pos);
-                // Scale it up
-                float scaleFactor = 2.0f; // adjust as needed
-                sprite.setScale(scaleFactor, scaleFactor);
                 window.draw(sprite);
             } else {
                 // fallback to circle if no texture found
