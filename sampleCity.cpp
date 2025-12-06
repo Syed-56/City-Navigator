@@ -54,7 +54,7 @@ SampleCity::SampleCity() {
 
     // Helper lambda to add locations easily
     auto addLocation = [&](std::string name, std::string type, int x, int y) {
-        Location loc;
+        sampleLocation loc;
         loc.name = name;
         loc.type = type;
         loc.x = x;

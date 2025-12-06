@@ -1,5 +1,6 @@
 #include "introScreen.h"
 #include "sampleCity.h"
+#include "createCity.h"
 #include <iostream>
 #include <SFML/System.hpp>
 
@@ -177,8 +178,10 @@ void IntroScreen::handleEvent(sf::Event& event, sf::RenderWindow& window) {
         if (showPopup) {
             if (closeButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
                 showPopup = false;
-            else if (createCityButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
+            else if (createCityButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
                 std::cout << "Create New City clicked!\n";
+                createCity(window);
+            }
             else if (navigateCityButtonRect.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
                 std::cout << "Navigate City clicked!\n";
                 transitionActive = true;

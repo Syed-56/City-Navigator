@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-struct Location {
+struct sampleLocation {
     std::string name;       // e.g., "Educators"
     std::string type;       // e.g., "School" (for texture mapping)
     float x, y;
@@ -25,7 +25,7 @@ public:
     int findLocationByName(const std::string& name) const;
 
 private:
-    std::vector<Location> locations;
+    std::vector<sampleLocation> locations;
     std::map<int, std::vector<int>> adjacencyList;
 
     sf::RectangleShape closeButton;
