@@ -349,8 +349,9 @@ void SampleCity::draw(sf::RenderWindow& window) {
     }
     
     // Call the travel function to draw popups
-    travel(window, graph, showTravelPopup, showErrorPopup,
-           startPoint, endPoint, typingStart, typingEnd);
+    travel(window, graph, showTravelPopup, showErrorPopup, 
+        startPoint, endPoint, typingStart, typingEnd,
+        currentPath, showPath, window.getDefaultView());
 }
 // Graph utilities
 const std::vector<int>& SampleCity::getNeighbors(int index) const {

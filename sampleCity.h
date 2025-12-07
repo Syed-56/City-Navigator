@@ -31,6 +31,8 @@ private:
     sf::RectangleShape closeButton;
     sf::Text closeText;
     sf::Font font;
+    std::vector<int> currentPath;
+    bool showPath = false;
     
     // Hover functionality
     int hoveredLocation;

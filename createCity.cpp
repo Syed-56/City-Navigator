@@ -177,6 +177,8 @@ void createCity(sf::RenderWindow& window) {
     std::string inputX = "00";
     std::string inputY = "00";
     bool typingName = false, typingX = false, typingY = false;
+    std::vector<int> currentPath;
+    bool showPath = false;
 
     // Connect popup fields
     int connectA = -1, connectB = -1;
@@ -1108,10 +1110,9 @@ void createCity(sf::RenderWindow& window) {
         }
 
         // ---------------- Travel popup ----------------
-        if (showTravelPopup || showErrorPopup) {
-            travel(window, graph, showTravelPopup, showErrorPopup, 
-                   startPoint, endPoint, typingStart, typingEnd);
-        }
+        travel(window, graph, showTravelPopup, showErrorPopup, 
+            startPoint, endPoint, typingStart, typingEnd,
+            currentPath, showPath, mapView);
 
         // ---------------- Floating history panel rendering ----------------
         // Reposition panel background
@@ -1171,4 +1172,3 @@ void createCity(sf::RenderWindow& window) {
         window.display();
     }
 }
-

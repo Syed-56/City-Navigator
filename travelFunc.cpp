@@ -2,11 +2,171 @@
 #include "createCity.h"
 #include <iostream>
 #include <sstream>
+#include <queue>
+#include <algorithm>
 
+// ==================== PATHFINDING (BFS) ====================
+std::vector<int> findPathBFS(const Graph& graph, int startId, int endId) {
+    std::vector<int> path;
+    
+    // Validate input
+    if (!graph.validIndex(startId) || !graph.validIndex(endId)) {
+        return path;
+    }
+    if (startId == endId) {
+        return {startId};
+    }
+    
+    int n = graph.nodes.size();
+    std::vector<bool> visited(n, false);
+    std::vector<int> parent(n, -1);
+    std::queue<int> q;
+    
+    // BFS initialization
+    q.push(startId);
+    visited[startId] = true;
+    
+    // BFS traversal
+    while (!q.empty()) {
+        int current = q.front();
+        q.pop();
+        
+        // Check if we reached the destination
+        if (current == endId) {
+            // Reconstruct path from end to start
+            while (current != -1) {
+                path.push_back(current);
+                current = parent[current];
+            }
+            // Reverse to get start->end order
+            std::reverse(path.begin(), path.end());
+            return path;
+        }
+        
+        // Explore neighbors
+        for (int neighbor : graph.adj[current]) {
+            if (!visited[neighbor] && graph.nodes[neighbor].active) {
+                visited[neighbor] = true;
+                parent[neighbor] = current;
+                q.push(neighbor);
+            }
+        }
+    }
+    
+    // No path found
+    return path;
+}
+
+// ==================== PATH HIGHLIGHTING ====================
+void highlightPath(sf::RenderWindow& window, const Graph& graph, 
+                   const std::vector<int>& path, const sf::View& mapView) {
+    
+    // Store current view and set to map view for drawing
+    sf::View originalView = window.getView();
+    window.setView(mapView);
+    
+    // Highlight edges along the path
+    for (size_t i = 0; i + 1 < path.size(); i++) {
+        int from = path[i];
+        int to = path[i + 1];
+        
+        if (!graph.validIndex(from) || !graph.validIndex(to)) continue;
+        
+        // Draw highlighted edge (thicker, different color)
+        sf::Vertex line[] = {
+            sf::Vertex(graph.nodes[from].pos, sf::Color(255, 100, 100)),  // Red
+            sf::Vertex(graph.nodes[to].pos, sf::Color(255, 100, 100))
+        };
+        
+        // Create a thicker line by drawing multiple offset lines
+        for (int offset = -2; offset <= 2; offset++) {
+            line[0].position = graph.nodes[from].pos + sf::Vector2f(offset, offset);
+            line[1].position = graph.nodes[to].pos + sf::Vector2f(offset, offset);
+            window.draw(line, 2, sf::Lines);
+        }
+        
+        // Draw the main thick line
+        line[0].position = graph.nodes[from].pos;
+        line[1].position = graph.nodes[to].pos;
+        line[0].color = sf::Color(255, 50, 50);  // Bright red
+        line[1].color = sf::Color(255, 50, 50);
+        window.draw(line, 2, sf::Lines);
+    }
+    
+    // Highlight nodes along the path
+    for (size_t i = 0; i < path.size(); i++) {
+        int nodeId = path[i];
+        if (!graph.validIndex(nodeId)) continue;
+        
+        const auto& node = graph.nodes[nodeId];
+        
+        // Draw glow effect around node
+        sf::CircleShape glow(20.f);
+        glow.setOrigin(20.f, 20.f);
+        glow.setPosition(node.pos);
+        glow.setFillColor(sf::Color(255, 200, 50, 100));  // Semi-transparent yellow
+        window.draw(glow);
+        
+        // Draw highlighted node (larger)
+        sf::CircleShape highlightedNode(15.f);
+        highlightedNode.setOrigin(15.f, 15.f);
+        highlightedNode.setPosition(node.pos);
+        
+        // Color code: start = green, end = red, intermediate = yellow
+        if (i == 0) {  // Start node
+            highlightedNode.setFillColor(sf::Color(100, 255, 100));  // Green
+        } else if (i == path.size() - 1) {  // End node
+            highlightedNode.setFillColor(sf::Color(255, 100, 100));  // Red
+        } else {  // Intermediate nodes
+            highlightedNode.setFillColor(sf::Color(255, 255, 100));  // Yellow
+        }
+        
+        highlightedNode.setOutlineColor(sf::Color::Black);
+        highlightedNode.setOutlineThickness(3.f);
+        window.draw(highlightedNode);
+        
+        // Draw node label
+        static sf::Font font;
+        static bool fontLoaded = false;
+        if (!fontLoaded) {
+            font.loadFromFile("Arial.ttf");
+            fontLoaded = true;
+        }
+        
+        sf::Text label(node.name, font, 14);
+        label.setFillColor(sf::Color::Black);
+        
+        // Position label above node with offset based on position in path
+        float offsetY = -35.f - (i * 3.f);  // Slight offset for each node
+        label.setPosition(node.pos.x - label.getLocalBounds().width / 2.f, 
+                         node.pos.y + offsetY);
+        
+        // Background for label
+        sf::RectangleShape labelBg(sf::Vector2f(
+            label.getLocalBounds().width + 10.f,
+            label.getLocalBounds().height + 5.f));
+        labelBg.setFillColor(sf::Color(255, 255, 255, 220));
+        labelBg.setOutlineColor(sf::Color::Black);
+        labelBg.setOutlineThickness(1.f);
+        labelBg.setPosition(label.getPosition().x - 5.f, 
+                           label.getPosition().y - 3.f);
+        
+        window.draw(labelBg);
+        window.draw(label);
+    }
+    
+    // Restore original view
+    window.setView(originalView);
+}
+
+// ==================== UPDATED TRAVEL FUNCTION ====================
 void travel(sf::RenderWindow& window, const Graph& graph,
     bool& showTravelPopup, bool& showErrorPopup,
     std::string& startPoint, std::string& endPoint,
-    bool& typingStart, bool& typingEnd)
+    bool& typingStart, bool& typingEnd,
+    std::vector<int>& currentPath, // Store current path
+    bool& showPath,               // Flag to show/highlight path
+    const sf::View& mapView)      // Map view for drawing
 {
     // ---------- Load Font ----------
     static sf::Font font;
@@ -99,6 +259,21 @@ void travel(sf::RenderWindow& window, const Graph& graph,
         submitText.setPosition(submitBtn.getPosition().x + 15, submitBtn.getPosition().y + 5);
         window.draw(submitText);
 
+        // Close Path Button (if a path is currently shown)
+        if (showPath) {
+            sf::RectangleShape closePathBtn({120.f, 34.f});
+            closePathBtn.setFillColor(sf::Color(240,160,160));
+            closePathBtn.setOutlineColor(sf::Color::Black);
+            closePathBtn.setOutlineThickness(1.f);
+            closePathBtn.setPosition(popupPos.x + popupSize.x/2.f + 60.f, popupPos.y + 140);
+            window.draw(closePathBtn);
+
+            sf::Text closePathText("Clear Path", font, 16);
+            closePathText.setFillColor(sf::Color::Black);
+            closePathText.setPosition(closePathBtn.getPosition().x + 10, closePathBtn.getPosition().y + 5);
+            window.draw(closePathText);
+        }
+
         // Handle mouse clicks for the popup
         if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
             sf::Vector2i mp = sf::Mouse::getPosition(window);
@@ -108,6 +283,7 @@ void travel(sf::RenderWindow& window, const Graph& graph,
             sf::FloatRect startBoxRect(popupPos.x + 130, popupPos.y + 25, 200.f, 30.f);
             sf::FloatRect endBoxRect(popupPos.x + 130, popupPos.y + 75, 200.f, 30.f);
             sf::FloatRect submitBtnRect(popupPos.x + popupSize.x/2.f - 50.f, popupPos.y + 140, 100.f, 34.f);
+            sf::FloatRect closePathBtnRect(popupPos.x + popupSize.x/2.f + 60.f, popupPos.y + 140, 120.f, 34.f);
             
             if (startBoxRect.contains(m)) {
                 typingStart = true;
@@ -132,11 +308,40 @@ void travel(sf::RenderWindow& window, const Graph& graph,
                     showErrorPopup = true;
                 }
                 else {
-                    showTravelPopup = false;
-                    std::cout << "Route: " << startPoint << " -> " << endPoint << "\n";
-                    startPoint = "";
-                    endPoint = "";
+                    // Find path
+                    auto startIt = graph.name_to_id.find(startPoint);
+                    auto endIt = graph.name_to_id.find(endPoint);
+                    
+                    if (startIt == graph.name_to_id.end() || endIt == graph.name_to_id.end()) {
+                        showErrorPopup = true;
+                    }
+                    
+                    int startId = startIt->second;
+                    int endId = endIt->second;
+                    
+                    currentPath = findPathBFS(graph, startId, endId);
+                    
+                    if (currentPath.empty()) {
+                        // No path found
+                        showErrorPopup = true;
+                        // Update error message
+                        // (You might want to create a separate error message for this)
+                    } else {
+                        // Path found - show it
+                        showPath = true;
+                        std::cout << "Path found from " << startPoint << " to " << endPoint << ":\n";
+                        for (size_t i = 0; i < currentPath.size(); i++) {
+                            std::cout << graph.nodes[currentPath[i]].name;
+                            if (i < currentPath.size() - 1) std::cout << " -> ";
+                        }
+                        std::cout << "\n";
+                    }
                 }
+            }
+            else if (showPath && closePathBtnRect.contains(m)) {
+                // Clear the current path
+                currentPath.clear();
+                showPath = false;
             }
         }
     }
@@ -158,6 +363,14 @@ void travel(sf::RenderWindow& window, const Graph& graph,
         errorText.setFillColor(sf::Color::Black);
         errorText.setPosition(errorPos.x + 20, errorPos.y + 30);
         window.draw(errorText);
+
+        // If we have a current path that's empty, show "No path found" message
+        if (!currentPath.empty() && currentPath.size() == 0) {
+            sf::Text noPathText("No path exists between these locations", font, 14);
+            noPathText.setFillColor(sf::Color::Black);
+            noPathText.setPosition(errorPos.x + 20, errorPos.y + 50);
+            window.draw(noPathText);
+        }
 
         // Close Button
         sf::RectangleShape closeBtn({80.f,30.f});
@@ -181,5 +394,35 @@ void travel(sf::RenderWindow& window, const Graph& graph,
                 showErrorPopup = false;
             }
         }
+    }
+
+    // ---------- Draw Path Highlighting (if enabled) ----------
+    if (showPath && !currentPath.empty()) {
+        highlightPath(window, graph, currentPath, mapView);
+        
+        // Also draw a path info box
+        sf::Vector2f infoSize(600.f, 80.f);
+        sf::Vector2f infoPos(10.f, window.getSize().y - infoSize.y - 10.f);
+        
+        sf::RectangleShape infoBg(infoSize);
+        infoBg.setFillColor(sf::Color(230, 230, 250, 220));
+        infoBg.setOutlineColor(sf::Color(100, 100, 200));
+        infoBg.setOutlineThickness(2.f);
+        infoBg.setPosition(infoPos);
+        window.draw(infoBg);
+        
+        std::string pathInfo = "Path: " + graph.nodes[currentPath[0]].name + 
+                              " -> " + graph.nodes[currentPath.back()].name +
+                              " (" + std::to_string(currentPath.size()) + " nodes)";
+        
+        sf::Text infoText(pathInfo, font, 14);
+        infoText.setFillColor(sf::Color::Black);
+        infoText.setPosition(infoPos.x + 10.f, infoPos.y + 10.f);
+        window.draw(infoText);
+        
+        sf::Text hintText("Click 'Clear Path' in travel popup to remove", font, 12);
+        hintText.setFillColor(sf::Color(80, 80, 80));
+        hintText.setPosition(infoPos.x + 10.f, infoPos.y + 40.f);
+        window.draw(hintText);
     }
 }
