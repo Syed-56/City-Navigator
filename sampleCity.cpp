@@ -1,5 +1,6 @@
 #include "sampleCity.h"
 #include <iostream>
+#include "travelFunc.h"
 #include <math.h>
 
 // Global texture map
@@ -41,6 +42,22 @@ SampleCity::SampleCity() {
     closeText.setFillColor(sf::Color::White);
     closeText.setPosition(20, 12);
 
+    // Travel button initialization
+    const float btnWidth = 120.f, btnHeight = 40.f;
+    const float travelBtnX = 100.f;  // Position on left side
+    const float travelBtnY = 650.f;  // Position near bottom
+    
+    travelButton.setSize(sf::Vector2f(btnWidth, btnHeight));
+    travelButton.setPosition(travelBtnX, travelBtnY);
+    travelButton.setFillColor(sf::Color(70, 130, 180));
+    travelButton.setOutlineThickness(2);
+    travelButton.setOutlineColor(sf::Color::Black);
+
+    travelText.setFont(font);
+    travelText.setString("Travel");
+    travelText.setCharacterSize(18);
+    travelText.setFillColor(sf::Color::White);
+    travelText.setPosition(travelBtnX + 28, travelBtnY + 8);
         // ==== ORGANIZED CITY MAP (OPTION A) ====
 
     // Predefined building types
@@ -145,9 +162,92 @@ SampleCity::SampleCity() {
 void SampleCity::handleEvent(sf::Event& event, bool& returnToMenu) {
     if (event.type == sf::Event::MouseButtonPressed) {
         sf::Vector2f mouse(event.mouseButton.x, event.mouseButton.y);
+        
+        // Close button
         if (closeButton.getGlobalBounds().contains(mouse)) {
-            returnToMenu = true; // go back to intro screen
+            returnToMenu = true;
         }
+        
+        // Travel button
+        else if (travelButton.getGlobalBounds().contains(mouse)) {
+            showTravelPopup = true;
+            showErrorPopup = false;
+            typingStart = typingEnd = false;
+        }
+        
+        // Travel popup handling
+        else if (showTravelPopup) {
+            // Calculate popup position (centered)
+            sf::Vector2f popupSize(400.f, 200.f);
+            sf::Vector2f popupPos(400.f, 300.f); // Adjust based on your window size
+            
+            // Define rectangles
+            sf::FloatRect startBoxRect(popupPos.x + 130, popupPos.y + 25, 200.f, 30.f);
+            sf::FloatRect endBoxRect(popupPos.x + 130, popupPos.y + 75, 200.f, 30.f);
+            sf::FloatRect submitBtnRect(popupPos.x + popupSize.x/2.f - 50.f, popupPos.y + 140, 100.f, 34.f);
+            
+            // Check for input box focus
+            if (startBoxRect.contains(mouse)) {
+                typingStart = true;
+                typingEnd = false;
+            }
+            else if (endBoxRect.contains(mouse)) {
+                typingStart = false;
+                typingEnd = true;
+            }
+            else if (submitBtnRect.contains(mouse)) {
+                // Validate input
+                if (startPoint.empty() || endPoint.empty() || 
+                    startPoint == endPoint ||
+                    findLocationByName(startPoint) == -1 ||
+                    findLocationByName(endPoint) == -1) {
+                    showErrorPopup = true;
+                } else {
+                    // Path finding logic here
+                    std::cout << "Finding route: " << startPoint << " -> " << endPoint << "\n";
+                    showTravelPopup = false;
+                    // You might want to show a path popup here
+                }
+            }
+        }
+        
+        // Error popup close button
+        else if (showErrorPopup) {
+            sf::Vector2f errorSize(300.f, 120.f);
+            sf::Vector2f errorPos(350.f, 300.f); // Adjust based on your window size
+            sf::FloatRect closeBtnRect(errorPos.x + errorSize.x/2 - 40.f, errorPos.y + 70.f, 80.f, 30.f);
+            
+            if (closeBtnRect.contains(mouse)) {
+                showErrorPopup = false;
+            }
+        }
+    }
+    
+    // Handle keyboard text input for travel popup
+    if (showTravelPopup && event.type == sf::Event::TextEntered) {
+        if (typingStart) {
+            if (event.text.unicode == '\b') { // Backspace
+                if (!startPoint.empty()) startPoint.pop_back();
+            }
+            else if (event.text.unicode < 128) {
+                startPoint += static_cast<char>(event.text.unicode);
+            }
+        }
+        else if (typingEnd) {
+            if (event.text.unicode == '\b') { // Backspace
+                if (!endPoint.empty()) endPoint.pop_back();
+            }
+            else if (event.text.unicode < 128) {
+                endPoint += static_cast<char>(event.text.unicode);
+            }
+        }
+    }
+    
+    // Escape key to close popups
+    if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
+        if (showTravelPopup) showTravelPopup = false;
+        if (showErrorPopup) showErrorPopup = false;
+        typingStart = typingEnd = false;
     }
 }
 
@@ -187,6 +287,12 @@ void SampleCity::draw(sf::RenderWindow& window) {
     // Draw close button
     window.draw(closeButton);
     window.draw(closeText);
+    
+    // Draw travel button (only if no popups are open)
+    if (!showTravelPopup && !showErrorPopup) {
+        window.draw(travelButton);
+        window.draw(travelText);
+    }
 
     if (hoveredLocation != -1) {
         sf::Text label;
@@ -219,8 +325,33 @@ void SampleCity::draw(sf::RenderWindow& window) {
         window.draw(label);
     }
     
+    // Create a Graph object from locations for the travel function
+    Graph graph;
+    
+    // Add all locations as nodes to the graph
+    for (size_t i = 0; i < locations.size(); i++) {
+        const auto& loc = locations[i];
+        Location graphLoc;
+        graphLoc.id = i;
+        graphLoc.name = loc.name;
+        graphLoc.type = loc.type;
+        graphLoc.pos = sf::Vector2f(loc.x, loc.y);
+        graphLoc.active = true;
+        graph.addNode(graphLoc);
+    }
+    
+    // Add edges (connections) to the graph based on neighbors
+    for (size_t i = 0; i < locations.size(); i++) {
+        for (int neighbor : locations[i].neighbors) {
+            // Add edge in both directions
+            graph.addEdge(i, neighbor);
+        }
+    }
+    
+    // Call the travel function to draw popups
+    travel(window, graph, showTravelPopup, showErrorPopup,
+           startPoint, endPoint, typingStart, typingEnd);
 }
-
 // Graph utilities
 const std::vector<int>& SampleCity::getNeighbors(int index) const {
     return adjacencyList.at(index);
@@ -231,4 +362,4 @@ int SampleCity::findLocationByName(const std::string& name) const {
         if (locations[i].name == name) return i;
     }
     return -1; // not found
-}
+} 

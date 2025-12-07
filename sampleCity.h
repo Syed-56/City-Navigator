@@ -36,6 +36,17 @@ private:
     int hoveredLocation;
     sf::Text hoverText;
     sf::RectangleShape hoverBackground;
+    // Travel button
+    sf::RectangleShape travelButton;
+    sf::Text travelText;
+    
+    // Travel popup states
+    bool showTravelPopup = false;
+    bool showErrorPopup = false;
+    std::string startPoint = "";
+    std::string endPoint = "";
+    bool typingStart = false;
+    bool typingEnd = false;
 };
 
 // Global texture map
