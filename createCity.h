@@ -35,6 +35,8 @@ public:
     void deactivateNode(int id);
 
     void activateNode(const Location& locCopy);
+    std::vector<int> findPathBFS(int startId, int endId) const;
+    std::vector<std::string> getPathNames(const std::vector<int>& pathIds) const;
 
     bool validIndex(int i) const;
 };

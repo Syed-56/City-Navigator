@@ -1,4 +1,5 @@
 #include "createCity.h"
+#include "travelFunc.h"
 #include <vector>
 #include <utility>
 
@@ -122,10 +123,10 @@ void ActionHistory::clear() {
 int hoveredNode = -1;
 void createCity(sf::RenderWindow& window) {
     const unsigned int WINDOW_W = 1000, WINDOW_H = 700;                      // top-left corner with 10px padding
-
-    // 2. Create the X text
     sf::Font font;
-    if (!font.loadFromFile("Arial.ttf")) { /* handle error */ }
+    if (!font.loadFromFile("Arial.ttf")) {
+        return;
+    }
 
     if (!loadFontRobust(font)) {
         std::cerr << "ERROR: Could not load a font. Place arial.ttf or DejaVuSans.ttf next to the executable.\n";
@@ -146,6 +147,19 @@ void createCity(sf::RenderWindow& window) {
     sf::Text plusText("+", font, 28);
     plusText.setFillColor(sf::Color::Black);
     plusText.setPosition(addBtn.getPosition().x + 12.f, addBtn.getPosition().y - 6.f);
+
+    // ---------- Travel Button ----------
+    const float btnWidth = 120.f, btnHeight = 40.f;
+    const float travelBtnX = 250.f, travelBtnY = 720.f; // Fixed position to be visible
+    sf::RectangleShape travelBtn(sf::Vector2f(btnWidth, btnHeight));
+    travelBtn.setPosition(travelBtnX, travelBtnY);
+    travelBtn.setFillColor(sf::Color(70, 130, 180));
+    travelBtn.setOutlineThickness(2);
+    travelBtn.setOutlineColor(sf::Color::Black);
+
+    sf::Text travelText("Travel", font, 18);
+    travelText.setFillColor(sf::Color::White);
+    travelText.setPosition(travelBtnX + 18, travelBtnY + 6);
 
     // Popup state
     bool showAddPopup = false;
@@ -192,6 +206,14 @@ void createCity(sf::RenderWindow& window) {
     cancelBtn.setOutlineColor(sf::Color::Black);
     cancelBtn.setOutlineThickness(1.f);
 
+    // ---------- Travel popup state ----------
+    bool showTravelPopup = false;
+    bool showErrorPopup = false;
+    std::string startPoint = "";
+    std::string endPoint = "";
+    bool typingStart = false;
+    bool typingEnd = false;
+
     // Map view / pan
     sf::View mapView = window.getDefaultView();
     bool panning = false;
@@ -233,6 +255,15 @@ void createCity(sf::RenderWindow& window) {
     btnClear.setFillColor(sf::Color(180, 180, 180));
     btnClose.setFillColor(sf::Color(200, 100, 100));
 
+    // Load textures once, outside the main loop
+    std::map<std::string, sf::Texture> nodeTextures;
+    for (const auto& type : buildingTypes) {
+        sf::Texture tex;
+        if (tex.loadFromFile("images/" + type + ".png")) {
+            nodeTextures[type] = tex;
+        }
+    }
+
     // For timing delta
     sf::Clock clock;
     std::vector<std::pair<float, float>> occupiedLocs;
@@ -241,18 +272,22 @@ void createCity(sf::RenderWindow& window) {
     while (window.isOpen()) {
         sf::Time dt = clock.restart();
         float deltaSeconds = dt.asSeconds();
-        std::map<std::string, sf::Texture> nodeTextures;
 
-        for (const auto& type : buildingTypes) {
-            sf::Texture tex;
-            if (tex.loadFromFile("images/" + type + ".png")) {
-                nodeTextures[type] = tex;
-            }
-        }
         sf::Event ev;
         while (window.pollEvent(ev)) {
             bool dropdownClickConsumed = false;
             if (ev.type == sf::Event::Closed) window.close();
+
+            // Escape key to close popups
+            if (ev.type == sf::Event::KeyPressed && ev.key.code == sf::Keyboard::Escape) {
+                if (showAddPopup) showAddPopup = false;
+                if (showConnectPopup) showConnectPopup = false;
+                if (showTravelPopup) showTravelPopup = false;
+                if (showErrorPopup) showErrorPopup = false;
+                typeDropdownOpen = false;
+                dropAOpen = dropBOpen = false;
+                typingName = typingX = typingY = typingStart = typingEnd = false;
+            }
 
             // Keyboard: text input for add popup
             if (ev.type == sf::Event::TextEntered && showAddPopup) {
@@ -270,21 +305,48 @@ void createCity(sf::RenderWindow& window) {
                 }
             }
 
-            // Key presses
+            // Keyboard: text input for travel popup
+            if (ev.type == sf::Event::TextEntered && showTravelPopup) {
+                if (typingStart) {
+                    if (ev.text.unicode == 8) { 
+                        if (!startPoint.empty()) startPoint.pop_back(); 
+                    }
+                    else if (ev.text.unicode >= 32 && ev.text.unicode < 128) {
+                        startPoint += static_cast<char>(ev.text.unicode);
+                    }
+                }
+                else if (typingEnd) {
+                    if (ev.text.unicode == 8) { 
+                        if (!endPoint.empty()) endPoint.pop_back(); 
+                    }
+                    else if (ev.text.unicode >= 32 && ev.text.unicode < 128) {
+                        endPoint += static_cast<char>(ev.text.unicode);
+                    }
+                }
+            }
+
             // Mouse pressed
             if (ev.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2f mouseScreen((float)ev.mouseButton.x, (float)ev.mouseButton.y);
                 sf::Vector2f mouseWorld = window.mapPixelToCoords({ ev.mouseButton.x, ev.mouseButton.y });
-
+            
+                // Travel button click check
+                sf::Vector2f travelBtnPos(250.f, 720.f);
+                sf::FloatRect travelBtnRect(travelBtnPos, sf::Vector2f(120.f, 40.f));
+                if (travelBtnRect.contains(mouseScreen) && !showTravelPopup && !showErrorPopup) {
+                    showTravelPopup = true;
+                    typingStart = true;
+                    typingEnd = false;
+                    continue;
+                }
+            
                 // Middle -> pan start
                 if (ev.mouseButton.button == sf::Mouse::Middle) {
                     panning = true;
                     lastMouse = mouseScreen;
                 }
 
-                // Panel UI gets priority when visible or animating (we'll treat it as present if it's partially visible)
-                // Map UI coords: buttons and panel are in screen coordinates (default view).
-                // If click inside panel region, process panel UI and skip other scene clicks.
+                // Panel UI gets priority when visible or animating
                 float currentPanelX = panelX;
                 float currentPanelY = panelY;
                 sf::FloatRect panelRect(currentPanelX, currentPanelY, panelW, panelH);
@@ -387,7 +449,7 @@ void createCity(sf::RenderWindow& window) {
                         if (xx < MIN_X || xx > MAX_X || yy < MIN_Y || yy > MAX_Y) {
                             // show popup, print message, or ignore silently
                             std::cout << "Coordinates out of bounds — node not added.\n";
-                            break;   // IMPORTANT: stop processing Submit
+                            continue;   // IMPORTANT: stop processing Submit
                         }
 
                         bool canPlace = true;  // assume we can place
@@ -738,6 +800,12 @@ void createCity(sf::RenderWindow& window) {
         );
         window.draw(instr);
 
+        // Draw travel button (only when popup is not open)
+        if (!showTravelPopup && !showErrorPopup) {
+            window.draw(travelBtn);
+            window.draw(travelText);
+        }
+
         // ---------------- Add popup UI ----------------
         sf::Vector2f pb = popupBg.getPosition();
         if (showAddPopup) {
@@ -770,9 +838,6 @@ void createCity(sf::RenderWindow& window) {
             typeText.setFillColor(sf::Color::Black);
             typeText.setPosition(pb.x + 26.f, pb.y + 44.f);
             window.draw(typeText);
-
-            // If dropdown open, draw items
-            
 
             // Name
             sf::RectangleShape nameRect(sf::Vector2f(380.f, 30.f));
@@ -1042,6 +1107,12 @@ void createCity(sf::RenderWindow& window) {
             }
         }
 
+        // ---------------- Travel popup ----------------
+        if (showTravelPopup || showErrorPopup) {
+            travel(window, graph, showTravelPopup, showErrorPopup, 
+                   startPoint, endPoint, typingStart, typingEnd);
+        }
+
         // ---------------- Floating history panel rendering ----------------
         // Reposition panel background
         panelBg.setPosition(panelX, panelY);
@@ -1100,3 +1171,4 @@ void createCity(sf::RenderWindow& window) {
         window.display();
     }
 }
+

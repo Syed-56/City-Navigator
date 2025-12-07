@@ -1,5 +1,5 @@
 //to compile:
-// g++ main.cpp introScreen.cpp sampleCity.cpp -o City-Navigator.exe -I"C:/SFML-2.6.1/include" -L"C:/SFML-2.6.1/lib" -lsfml-graphics -lsfml-window -lsfml-system (type .cpp file names whom we are coding here we did introscreen and samplecity and main will always be compiled)
+// g++ main.cpp introScreen.cpp sampleCity.cpp createCity.cpp travelFunc.cpp -o City-Navigator.exe -I"C:/SFML-2.6.1/include" -L"C:/SFML-2.6.1/lib" -lsfml-graphics -lsfml-window -lsfml-system (type .cpp file names whom we are coding here we did introscreen and samplecity and main will always be compiled)
 #include <SFML/Graphics.hpp>
 #include "introScreen.h"
 #include "sampleCity.h"
