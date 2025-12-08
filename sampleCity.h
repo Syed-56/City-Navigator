@@ -5,8 +5,8 @@
 #include <string>
 
 struct sampleLocation {
-    std::string name;       // e.g., "Educators"
-    std::string type;       // e.g., "School" (for texture mapping)
+    std::string name;      
+    std::string type;       
     float x, y;
     std::vector<int> neighbors;
     sf::Sprite sprite;      // Sprite for icon
@@ -18,7 +18,7 @@ public:
 
     void handleEvent(sf::Event& event, bool& returnToMenu);
     void draw(sf::RenderWindow& window);
-    void update(sf::RenderWindow& window); // Add update method for hover
+    void update(sf::RenderWindow& window); 
 
     // Graph utilities
     const std::vector<int>& getNeighbors(int index) const;
@@ -51,6 +51,5 @@ private:
     bool typingEnd = false;
 };
 
-// Global texture map
 extern std::map<std::string, sf::Texture> buildingTextures;
-void loadBuildingTextures(); // Call this before creating SampleCity
+void loadBuildingTextures(); 
