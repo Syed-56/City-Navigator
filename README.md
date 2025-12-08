@@ -2,14 +2,20 @@
 A C++ project using SFML to visualize Data Structures and Algorithms.
 
 ## Features
-- Interactive visualization of data structures
-- Educational tool for understanding DSA concepts
-- Built with SFML for graphics rendering
+- Travel in a built-in City
+- Create a city from scratch
+- 5 Types of buildings with a 1000x700 map
+- Craft Your City-Planning Skills
+
+## Implementation
+- Graphs DS used for City Networking
+- Stack for Undo/Redo
+- Travelling done with BFS Traversal
+- Linked List DS to point to the history of operations
 
 ## Tech Used
 - C++ Compiler (MinGW/GCC)
 - SFML 2.6.1 library
-- Git (for cloning)
 
 ## Team
 - Syed Sultan Ahmed (Leader)
