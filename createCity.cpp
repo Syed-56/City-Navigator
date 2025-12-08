@@ -20,7 +20,6 @@ std::string formatIntPair(int x, int y) {
     return ss.str();
 }
 
-// ------------------ Graph methods ------------------
 
 int Graph::addNode(const Location& loc) {
     int id = nodes.size();
@@ -71,7 +70,6 @@ void Graph::activateNode(const Location& locCopy) {
         if ((int)adj.size() <= locCopy.id) adj.resize(locCopy.id + 1);
     }
     else {
-        // If adding new beyond current size (shouldn't normally happen), append.
         addNode(locCopy);
     }
     name_to_id[locCopy.name] = locCopy.id;
@@ -81,7 +79,6 @@ bool Graph::validIndex(int i) const {
     return i >= 0 && i < (int)nodes.size();
 }
 
-// ------------------ ActionHistory methods ------------------
 
 void ActionHistory::push(const std::shared_ptr<Action>& act) {
     act->next = head;
@@ -122,7 +119,7 @@ void ActionHistory::clear() {
 
 int hoveredNode = -1;
 void createCity(sf::RenderWindow& window) {
-    const unsigned int WINDOW_W = 1000, WINDOW_H = 700;                      // top-left corner with 10px padding
+    const unsigned int WINDOW_W = 1000, WINDOW_H = 700;                      
     sf::Font font;
     if (!font.loadFromFile("Arial.ttf")) {
         return;
@@ -134,8 +131,8 @@ void createCity(sf::RenderWindow& window) {
     }
 
     Graph graph;
-    ActionHistory undoStack; // actions to undo (top = most recent)
-    ActionHistory redoStack; // actions that were undone (for redo)
+    ActionHistory undoStack; 
+    ActionHistory redoStack; 
 
     // UI: + button
     sf::CircleShape addBtn(22.f);
@@ -150,7 +147,7 @@ void createCity(sf::RenderWindow& window) {
 
     // ---------- Travel Button ----------
     const float btnWidth = 120.f, btnHeight = 40.f;
-    const float travelBtnX = 250.f, travelBtnY = 720.f; // Fixed position to be visible
+    const float travelBtnX = 250.f, travelBtnY = 720.f; 
     sf::RectangleShape travelBtn(sf::Vector2f(btnWidth, btnHeight));
     travelBtn.setPosition(travelBtnX, travelBtnY);
     travelBtn.setFillColor(sf::Color(70, 130, 180));
@@ -166,10 +163,9 @@ void createCity(sf::RenderWindow& window) {
     bool showConnectPopup = false;
 
     // One-time rule: after first node added, show a modal asking to add another before connecting
-    bool firstNodeNoticePending = false; // triggered immediately after first node add
-    bool firstNodeNoticeShownAlready = false; // ensure it happens only once
+    bool firstNodeNoticePending = false; 
+    bool firstNodeNoticeShownAlready = false; 
 
-    // Add popup fields
     std::vector<std::string> buildingTypes = {"Apartment", "School", "Office", "Park", "Hospital"};
     int typeIndex = 0;
     bool typeDropdownOpen = false;
@@ -180,11 +176,9 @@ void createCity(sf::RenderWindow& window) {
     std::vector<int> currentPath;
     bool showPath = false;
 
-    // Connect popup fields
     int connectA = -1, connectB = -1;
     bool dropAOpen = false, dropBOpen = false;
 
-    // Popup rectangles
     sf::RectangleShape popupBg(sf::Vector2f(420.f, 260.f));
     popupBg.setFillColor(sf::Color(230, 230, 230));
     popupBg.setOutlineColor(sf::Color::Black);
@@ -208,7 +202,6 @@ void createCity(sf::RenderWindow& window) {
     cancelBtn.setOutlineColor(sf::Color::Black);
     cancelBtn.setOutlineThickness(1.f);
 
-    // ---------- Travel popup state ----------
     bool showTravelPopup = false;
     bool showErrorPopup = false;
     std::string startPoint = "";
@@ -216,26 +209,22 @@ void createCity(sf::RenderWindow& window) {
     bool typingStart = false;
     bool typingEnd = false;
 
-    // Map view / pan
     sf::View mapView = window.getDefaultView();
     bool panning = false;
     sf::Vector2f lastMouse;
 
     const float gridSize = 50.f;
 
-    // ---------------- Floating overlay panel (right) ----------------
     const float panelW = 320.f;
     const float panelH = (float)WINDOW_H - 80.f;
-    // visible x and hidden x (off-screen right)
     float panelXVisible = WINDOW_W - panelW - 20.f;
     float panelXHidden = WINDOW_W + 10.f;
-    float panelX = panelXHidden; // start hidden
+    float panelX = panelXHidden; 
     float panelY = 40.f;
     bool panelVisible = false;
     bool panelAnimating = false;
-    float panelSpeed = 900.f; // pixels per second for sliding
+    float panelSpeed = 900.f; 
 
-    // UI elements inside panel (using UI coordinates)
     sf::RectangleShape panelBg(sf::Vector2f(panelW, panelH));
     panelBg.setFillColor(sf::Color(40, 40, 40, 220));
     panelBg.setOutlineColor(sf::Color(80, 80, 80));
@@ -246,7 +235,6 @@ void createCity(sf::RenderWindow& window) {
     panelTitle.setFillColor(sf::Color::White);
     panelTitle.setPosition(panelX + 14.f, panelY + 12.f);
 
-    // Panel buttons (Undo, Redo, Clear, Toggle)
     sf::RectangleShape btnUndo(sf::Vector2f(70.f, 28.f));
     sf::RectangleShape btnRedo(sf::Vector2f(70.f, 28.f));
     sf::RectangleShape btnClear(sf::Vector2f(70.f, 28.f));
@@ -257,7 +245,6 @@ void createCity(sf::RenderWindow& window) {
     btnClear.setFillColor(sf::Color(180, 180, 180));
     btnClose.setFillColor(sf::Color(200, 100, 100));
 
-    // Load textures once, outside the main loop
     std::map<std::string, sf::Texture> nodeTextures;
     for (const auto& type : buildingTypes) {
         sf::Texture tex;
@@ -291,7 +278,6 @@ void createCity(sf::RenderWindow& window) {
                 typingName = typingX = typingY = typingStart = typingEnd = false;
             }
 
-            // Keyboard: text input for add popup
             if (ev.type == sf::Event::TextEntered && showAddPopup) {
                 if (typingName) {
                     if (ev.text.unicode == 8) { if (!inputName.empty()) inputName.pop_back(); }
@@ -307,7 +293,6 @@ void createCity(sf::RenderWindow& window) {
                 }
             }
 
-            // Keyboard: text input for travel popup
             if (ev.type == sf::Event::TextEntered && showTravelPopup) {
                 if (typingStart) {
                     if (ev.text.unicode == 8) { 
@@ -327,12 +312,10 @@ void createCity(sf::RenderWindow& window) {
                 }
             }
 
-            // Mouse pressed
             if (ev.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2f mouseScreen((float)ev.mouseButton.x, (float)ev.mouseButton.y);
                 sf::Vector2f mouseWorld = window.mapPixelToCoords({ ev.mouseButton.x, ev.mouseButton.y });
             
-                // Travel button click check
                 sf::Vector2f travelBtnPos(250.f, 720.f);
                 sf::FloatRect travelBtnRect(travelBtnPos, sf::Vector2f(120.f, 40.f));
                 if (travelBtnRect.contains(mouseScreen) && !showTravelPopup && !showErrorPopup) {
@@ -342,18 +325,15 @@ void createCity(sf::RenderWindow& window) {
                     continue;
                 }
             
-                // Middle -> pan start
                 if (ev.mouseButton.button == sf::Mouse::Middle) {
                     panning = true;
                     lastMouse = mouseScreen;
                 }
 
-                // Panel UI gets priority when visible or animating
                 float currentPanelX = panelX;
                 float currentPanelY = panelY;
                 sf::FloatRect panelRect(currentPanelX, currentPanelY, panelW, panelH);
                 if (panelRect.contains(mouseScreen)) {
-                    // compute button positions relative to panel
                     panelBg.setPosition(currentPanelX, currentPanelY);
 
                     btnUndo.setPosition(currentPanelX + 14.f, currentPanelY + 44.f);
@@ -390,20 +370,18 @@ void createCity(sf::RenderWindow& window) {
                             undoStack.push(act);
                         }
                     }
-                    // Clear history (both stacks)
                     else if (btnClear.getGlobalBounds().contains(mouseScreen)) {
                         undoStack.clear();
                         redoStack.clear();
                     }
-                    // Close panel
                     else if (btnClose.getGlobalBounds().contains(mouseScreen)) {
                         return;
                     }
                     else {
-                        // Click inside list region: we could implement selecting entries; for now do nothing
+
                     }
 
-                    continue; // skip other scene clicks
+                    continue; 
                 }
 
                 // If add popup open, handle its UI first
@@ -416,11 +394,9 @@ void createCity(sf::RenderWindow& window) {
                     submitBtn.setPosition(pb.x + 220.f, pb.y + 200.f);
                     cancelBtn.setPosition(pb.x + 60.f, pb.y + 200.f);
 
-                    // Click inside typeRect toggles dropdown
                     if (typeRect.contains(mouseScreen)) {
                         typeDropdownOpen = !typeDropdownOpen;
                     }
-                    // Click on name/x/y fields toggles typing
                     else if (nameRect.contains(mouseScreen)) {
                         typingName = true; typingX = typingY = false;
                         typeDropdownOpen = false;
@@ -433,7 +409,7 @@ void createCity(sf::RenderWindow& window) {
                         typingY = true; typingName = typingX = false;
                         typeDropdownOpen = false;
                     }
-                    // Click on Submit
+                    
                     else if (submitBtn.getGlobalBounds().contains(mouseScreen)) {
                         // Parse coordinates (with fallback)
                         float xx = 200.f, yy = 200.f;
@@ -442,24 +418,22 @@ void createCity(sf::RenderWindow& window) {
                         try { yy = std::stof(inputY); }
                         catch (...) { yy = 200.f; }
 
-                        // ---- BOUNDS CHECK HERE ----
                         const float MIN_X = 15.f;
-                        const float MAX_X = 975.f;      // or ANY custom number
+                        const float MAX_X = 975.f;     
                         const float MIN_Y = 15.f;
                         const float MAX_Y = 700.f;
 
                         if (xx < MIN_X || xx > MAX_X || yy < MIN_Y || yy > MAX_Y) {
-                            // show popup, print message, or ignore silently
                             std::cout << "Coordinates out of bounds — node not added.\n";
-                            continue;   // IMPORTANT: stop processing Submit
+                            continue;   
                         }
 
-                        bool canPlace = true;  // assume we can place
+                        bool canPlace = true;  
 
                         for (int i = 0; i < occupiedLocs.size(); i++) {
                             if (abs(occupiedLocs[i].first - xx) < 50 && abs(occupiedLocs[i].second - yy) < 50) {
                                 std::cout << "Location too close to an existing one\n";
-                                canPlace = false; // prevent placement
+                                canPlace = false; 
                                 break;
                             }
                         }
@@ -475,30 +449,25 @@ void createCity(sf::RenderWindow& window) {
                             loc.active = true;
                             int newId = graph.addNode(loc);
 
-                            // Create structured action and push to undo stack
                             auto act = std::make_shared<Action>(ActKind::AddNode);
-                            act->nodeSnapshot = loc;         // snapshot so we can restore on redo
+                            act->nodeSnapshot = loc;         
                             std::ostringstream ds;
                             ds << "Added: " << loc.type << " '" << loc.name << "' at (" << (int)xx << "," << (int)yy << ")";
                             act->description = ds.str();
                             undoStack.push(act);
-                            // New action invalidates redo stack
                             redoStack.clear();
 
-                            // One-time rule: if graph now has exactly 1 node, show the modal and DO NOT open connect popup.
                             if (graph.nodes.size() == 1 && !firstNodeNoticeShownAlready) {
-                                firstNodeNoticePending = true; // will be shown below in render
+                                firstNodeNoticePending = true; 
                                 firstNodeNoticeShownAlready = true;
                                 showConnectPopup = false;
                             }
                             else {
-                                // Normal: open connect popup for the newly added node
                                 showConnectPopup = true;
                                 connectA = newId;
                                 connectB = -1;
                             }
 
-                            // Reset add popup fields/state
                             showAddPopup = false;
                             typeDropdownOpen = false;
                             typingName = typingX = typingY = false;
@@ -508,19 +477,15 @@ void createCity(sf::RenderWindow& window) {
                         }
 
                     }
-                    // Cancel
                     else if (cancelBtn.getGlobalBounds().contains(mouseScreen)) {
                         showAddPopup = false;
                         typeDropdownOpen = false;
                         typingName = typingX = typingY = false;
                     }
                     else {
-                        // If clicked outside add popup fields: close type dropdown and stop typing
                         typingName = typingX = typingY = false;
 
-                        // If click was inside dropdown area while open, handle selection
                         if (typeDropdownOpen) {
-                            // dropdown rect extends under typeRect
                             float itemH = 28.f;
                             sf::FloatRect dropdownRect(typeRect.left, typeRect.top + typeRect.height, typeRect.width, itemH * (float)buildingTypes.size());
                             if (dropdownRect.contains(mouseScreen)) {
@@ -531,16 +496,14 @@ void createCity(sf::RenderWindow& window) {
                                 typeDropdownOpen = false;
                             }
                             else {
-                                // clicked outside dropdown -> close it
                                 typeDropdownOpen = false;
                             }
                         }
                     }
 
-                    continue; // done processing this mouse press
-                } // end showAddPopup handling
+                    continue;
+                } 
 
-                // If connect popup open, handle its UI first
                 if (showConnectPopup) {
                     sf::Vector2f cb = connectBg.getPosition();
                     sf::FloatRect aRect(cb.x + 20.f, cb.y + 40.f, 380.f, 30.f);
@@ -548,7 +511,6 @@ void createCity(sf::RenderWindow& window) {
                     submitBtn.setPosition(cb.x + 220.f, cb.y + 140.f);
                     cancelBtn.setPosition(cb.x + 60.f, cb.y + 140.f);
 
-                    // Click on From/To toggles dropdowns
                     if (aRect.contains(mouseScreen)) {
                         dropAOpen = !dropAOpen;
                         dropBOpen = false;
@@ -557,12 +519,10 @@ void createCity(sf::RenderWindow& window) {
                         dropBOpen = !dropBOpen;
                         dropAOpen = false;
                     }
-                    // Submit (Connect)
                     else if (submitBtn.getGlobalBounds().contains(mouseScreen)) {
                         if (connectA >= 0 && connectB >= 0 && connectA != connectB && connectA < (int)graph.nodes.size() && connectB < (int)graph.nodes.size()) {
                             graph.addEdge(connectA, connectB);
 
-                            // push structured action
                             auto act = std::make_shared<Action>(ActKind::Connect);
                             act->a = connectA; act->b = connectB;
                             std::ostringstream ds;
@@ -579,7 +539,6 @@ void createCity(sf::RenderWindow& window) {
                         dropAOpen = dropBOpen = false;
                     }
                     else {
-                        // if a dropdown is open and click within its area, select item
                         if (dropAOpen) {
                             float itemH = 28.f;
                             sf::FloatRect dropdownRect(aRect.left, aRect.top + aRect.height, aRect.width, itemH * (float)graph.nodes.size());
@@ -610,14 +569,10 @@ void createCity(sf::RenderWindow& window) {
                         }
                     }
 
-                    continue; // skip other scene clicks
-                } // end showConnectPopup handling
-
-                // No popups active:
-                // Check + button (screen coords)
+                    continue; 
+                } 
                 if (addBtn.getGlobalBounds().contains(mouseScreen)) {
                     showAddPopup = true;
-                    // default values
                     typeIndex = 0;
                     typeDropdownOpen = false;
                     inputName = "";
@@ -627,12 +582,10 @@ void createCity(sf::RenderWindow& window) {
                     continue;
                 }
 
-                // Click on a node (world coords) should open connect popup with that node as From
                 if (ev.mouseButton.button == sf::Mouse::Left) {
                     for (auto& loc : graph.nodes) {
                         if (!loc.active) continue;
                         if (pointInCircle(mouseWorld, loc.pos, 12.f)) {
-                            // If graph size is 1 and firstNodeNotice hasn't been shown before -> show modal instead
                             if (graph.nodes.size() == 1 && !firstNodeNoticeShownAlready) {
                                 firstNodeNoticePending = true;
                                 firstNodeNoticeShownAlready = true;
@@ -648,14 +601,12 @@ void createCity(sf::RenderWindow& window) {
                         }
                     }
                 }
-            } // end MouseButtonPressed
+            } 
 
-            // Mouse release
             if (ev.type == sf::Event::MouseButtonReleased) {
                 if (ev.mouseButton.button == sf::Mouse::Middle) panning = false;
             }
 
-            // Mouse move for panning
             if (ev.type == sf::Event::MouseMoved) {
                 sf::Vector2f curr((float)ev.mouseMove.x, (float)ev.mouseMove.y);
                 if (panning) {
@@ -665,9 +616,7 @@ void createCity(sf::RenderWindow& window) {
                     lastMouse = curr;
                 }
             }
-        } // end event polling
-
-        // ----------------- Panel animation -----------------
+        }
         if (panelAnimating) {
             float targetX = panelVisible ? panelXVisible : panelXHidden;
             if (std::abs(panelX - targetX) < 2.f) {
@@ -677,12 +626,10 @@ void createCity(sf::RenderWindow& window) {
             else {
                 float dir = (targetX > panelX) ? 1.f : -1.f;
                 panelX += dir * panelSpeed * deltaSeconds;
-                // clamp
                 if ((dir > 0 && panelX > targetX) || (dir < 0 && panelX < targetX)) panelX = targetX;
             }
         }
 
-        // ----------------- Rendering -----------------
         window.clear(sf::Color(210, 210, 210));
         window.setView(mapView);
 
@@ -737,7 +684,6 @@ void createCity(sf::RenderWindow& window) {
         for (const auto& loc : graph.nodes) {
             if (!loc.active) continue;
 
-            // Check if we have a texture for this type
             auto it = nodeTextures.find(loc.type);
             if (it != nodeTextures.end()) {
                 sf::Sprite sprite;
@@ -746,7 +692,6 @@ void createCity(sf::RenderWindow& window) {
                 sprite.setPosition(loc.pos);
                 window.draw(sprite);
             } else {
-                // fallback to circle if no texture found
                 sf::CircleShape node(12.f);
                 node.setOrigin(12.f, 12.f);
                 node.setPosition(loc.pos);
@@ -788,27 +733,23 @@ void createCity(sf::RenderWindow& window) {
         // Reset to UI view
         window.setView(window.getDefaultView());
 
-        // Draw + button
         window.draw(addBtn);
         window.draw(plusText);
 
-        // Instructions
         sf::Text instr("Click '+' to add", font, 24);
         instr.setFillColor(sf::Color::Black);
-        float padding = 10.f; // spacing between buttons
+        float padding = 10.f; 
         instr.setPosition(
-            addBtn.getPosition().x + 2*addBtn.getRadius() + padding, // right of addBtn
-            addBtn.getPosition().y // same vertical position
+            addBtn.getPosition().x + 2*addBtn.getRadius() + padding, 
+            addBtn.getPosition().y 
         );
         window.draw(instr);
 
-        // Draw travel button (only when popup is not open)
         if (!showTravelPopup && !showErrorPopup) {
             window.draw(travelBtn);
             window.draw(travelText);
         }
 
-        // ---------------- Add popup UI ----------------
         sf::Vector2f pb = popupBg.getPosition();
         if (showAddPopup) {
             window.draw(popupBg);
@@ -818,7 +759,6 @@ void createCity(sf::RenderWindow& window) {
             title.setPosition(pb.x + 20.f, pb.y + 8.f);
             window.draw(title);
 
-            // Type row (styled dropdown)
             sf::RectangleShape typeRect(sf::Vector2f(200.f, 30.f));
             typeRect.setPosition(pb.x + 20.f, pb.y + 40.f);
             typeRect.setFillColor(sf::Color::White);
@@ -826,7 +766,6 @@ void createCity(sf::RenderWindow& window) {
             typeRect.setOutlineThickness(1.f);
             window.draw(typeRect);
 
-            // Arrow indicator
             sf::ConvexShape arrow;
             arrow.setPointCount(3);
             arrow.setPoint(0, sf::Vector2f(0, 0));
@@ -859,7 +798,6 @@ void createCity(sf::RenderWindow& window) {
             nameInput.setPosition(pb.x + 110.f, pb.y + 92.f);
             window.draw(nameInput);
 
-            // X
             sf::RectangleShape xRect(sf::Vector2f(160.f, 30.f));
             xRect.setPosition(pb.x + 20.f, pb.y + 140.f);
             xRect.setFillColor(typingX ? sf::Color(255, 255, 210) : sf::Color::White);
@@ -872,7 +810,6 @@ void createCity(sf::RenderWindow& window) {
             xLabel.setPosition(pb.x + 26.f, pb.y + 142.f);
             window.draw(xLabel);
 
-            // Y
             sf::RectangleShape yRect(sf::Vector2f(160.f, 30.f));
             yRect.setPosition(pb.x + 210.f, pb.y + 140.f);
             yRect.setFillColor(typingY ? sf::Color(255, 255, 210) : sf::Color::White);
@@ -885,16 +822,15 @@ void createCity(sf::RenderWindow& window) {
             yLabel.setPosition(pb.x + 216.f, pb.y + 142.f);
             window.draw(yLabel);
 
-            // Buttons
             submitBtn.setPosition(pb.x + 220.f, pb.y + 200.f);
             cancelBtn.setPosition(pb.x + 60.f, pb.y + 200.f);
             window.draw(submitBtn);
             window.draw(cancelBtn);
             sf::Text sT("Submit", font, 16); sT.setFillColor(sf::Color::Black); sT.setPosition(submitBtn.getPosition().x + 14.f, submitBtn.getPosition().y + 6.f); window.draw(sT);
             sf::Text cT("Cancel", font, 16); cT.setFillColor(sf::Color::Black); cT.setPosition(cancelBtn.getPosition().x + 20.f, cancelBtn.getPosition().y + 6.f); window.draw(cT);
-        } // end showAddPopup
+        } 
         
-        static std::string selectedType = "";  // persists across frames
+        static std::string selectedType = "";  
         static int dropDownIndex = 0;
         static bool keyPressed = false;
         if (typeDropdownOpen) {
@@ -903,7 +839,6 @@ void createCity(sf::RenderWindow& window) {
             sf::RectangleShape typeRect(sf::Vector2f(200.f, 30.f));
             typeRect.setPosition(dropdownPos);
         
-            // Background for dropdown items
             sf::RectangleShape dropBg(sf::Vector2f(typeRect.getSize().x, itemH * (float)buildingTypes.size()));
             dropBg.setPosition(dropdownPos.x, dropdownPos.y + typeRect.getSize().y);
             dropBg.setFillColor(sf::Color(245, 245, 245));
@@ -911,7 +846,6 @@ void createCity(sf::RenderWindow& window) {
             dropBg.setOutlineThickness(1.f);
             window.draw(dropBg);
         
-            // --- Handle keyboard input ---
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && !keyPressed) {
                 dropDownIndex++;
                 if (dropDownIndex >= buildingTypes.size()) dropDownIndex = buildingTypes.size() - 1;
@@ -923,22 +857,20 @@ void createCity(sf::RenderWindow& window) {
                 keyPressed = true;
             }
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) && !keyPressed) {
-                selectedType = buildingTypes[dropDownIndex]; // select option
-                typeDropdownOpen = false; // close dropdown
+                selectedType = buildingTypes[dropDownIndex]; 
+                typeDropdownOpen = false; 
                 keyPressed = true;
             }
             else if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Down) &&
                      !sf::Keyboard::isKeyPressed(sf::Keyboard::Up) &&
                      !sf::Keyboard::isKeyPressed(sf::Keyboard::Enter)) {
-                keyPressed = false; // reset flag when no key pressed
+                keyPressed = false; 
             }
         
-            // --- Draw dropdown items ---
             for (int i = 0; i < (int)buildingTypes.size(); ++i) {
                 sf::RectangleShape itemRect(sf::Vector2f(typeRect.getSize().x, itemH));
                 itemRect.setPosition(dropBg.getPosition().x, dropBg.getPosition().y + i * itemH);
         
-                // Highlight if keyboard selected
                 if (i == dropDownIndex) {
                     itemRect.setFillColor(sf::Color(200, 220, 255));
                 } else {
@@ -956,7 +888,6 @@ void createCity(sf::RenderWindow& window) {
         }
         
 
-        // ---------------- Connect popup UI ----------------
         if (showConnectPopup) {
             window.draw(connectBg);
             sf::Vector2f cb = connectBg.getPosition();
@@ -966,7 +897,6 @@ void createCity(sf::RenderWindow& window) {
             title.setPosition(cb.x + 20.f, cb.y + 8.f);
             window.draw(title);
 
-            // From box (dropdown)
             sf::RectangleShape aRect(sf::Vector2f(380.f, 30.f));
             aRect.setPosition(cb.x + 20.f, cb.y + 40.f);
             aRect.setFillColor(dropAOpen ? sf::Color(255, 255, 210) : sf::Color::White);
@@ -1008,12 +938,10 @@ void createCity(sf::RenderWindow& window) {
             sf::Text sT("Connect", font, 16); sT.setFillColor(sf::Color::Black); sT.setPosition(submitBtn.getPosition().x + 10.f, submitBtn.getPosition().y + 6.f); window.draw(sT);
             sf::Text cT("Cancel", font, 16); cT.setFillColor(sf::Color::Black); cT.setPosition(cancelBtn.getPosition().x + 20.f, cancelBtn.getPosition().y + 6.f); window.draw(cT);
 
-            // hint
             sf::Text hint("Click From/To to open dropdowns and pick locations", font, 12);
             hint.setFillColor(sf::Color(80, 80, 80));
             hint.setPosition(cb.x + 20.f, cb.y + 180.f);
             window.draw(hint);
-            // If dropdown A open, draw list
             if (dropAOpen) {
                 float itemH = 28.f;
                 sf::RectangleShape dropBg(sf::Vector2f(aRect.getSize().x, itemH * std::max(1, (int)graph.nodes.size())));
@@ -1054,7 +982,6 @@ void createCity(sf::RenderWindow& window) {
                     if (!graph.nodes[i].active) continue;
                     sf::RectangleShape item(sf::Vector2f(bRect.getSize().x, itemH));
                     item.setPosition(dropBg.getPosition().x, dropBg.getPosition().y + i * itemH);
-                    // hover highlight
                     sf::Vector2i mi = sf::Mouse::getPosition(window);
                     sf::Vector2f m((float)mi.x, (float)mi.y);
                     if (sf::FloatRect(item.getPosition(), item.getSize()).contains(m)) item.setFillColor(sf::Color(200, 220, 255));
@@ -1067,11 +994,9 @@ void createCity(sf::RenderWindow& window) {
                     window.draw(it);
                 }
             }
-        } // end connect popup
+        } 
 
-        // ---------------- First-node modal (one-time) ----------------
         if (firstNodeNoticePending) {
-            // draw a centered modal rectangle
             float mw = 480.f, mh = 140.f;
             sf::RectangleShape modalBg(sf::Vector2f(mw, mh));
             modalBg.setFillColor(sf::Color(245, 245, 245));
@@ -1090,7 +1015,6 @@ void createCity(sf::RenderWindow& window) {
             msg.setPosition(modalBg.getPosition().x + 18.f, modalBg.getPosition().y + 44.f);
             window.draw(msg);
 
-            // OK button
             sf::RectangleShape okBtn(sf::Vector2f(100.f, 34.f));
             okBtn.setFillColor(sf::Color(180, 240, 180));
             okBtn.setOutlineColor(sf::Color::Black);
@@ -1099,7 +1023,6 @@ void createCity(sf::RenderWindow& window) {
             window.draw(okBtn);
             sf::Text okT("OK", font, 16); okT.setFillColor(sf::Color::Black); okT.setPosition(okBtn.getPosition().x + 36.f, okBtn.getPosition().y + 6.f); window.draw(okT);
 
-            // detect click on OK (use immediate mouse state)
             if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
                 sf::Vector2i mp = sf::Mouse::getPosition(window);
                 sf::Vector2f m((float)mp.x, (float)mp.y);
@@ -1109,21 +1032,16 @@ void createCity(sf::RenderWindow& window) {
             }
         }
 
-        // ---------------- Travel popup ----------------
         travel(window, graph, showTravelPopup, showErrorPopup, 
             startPoint, endPoint, typingStart, typingEnd,
             currentPath, showPath, mapView);
 
-        // ---------------- Floating history panel rendering ----------------
-        // Reposition panel background
         panelBg.setPosition(panelX, panelY);
         window.draw(panelBg);
 
-        // Title
         panelTitle.setPosition(panelX + 14.f, panelY + 12.f);
         window.draw(panelTitle);
 
-        // Buttons inside panel (Undo/Redo/Clear/Close)
         btnUndo.setPosition(panelX + 14.f, panelY + 44.f);
         btnRedo.setPosition(panelX + 14.f + 80.f, panelY + 44.f);
         btnClear.setPosition(panelX + 14.f + 160.f, panelY + 44.f);
@@ -1142,14 +1060,12 @@ void createCity(sf::RenderWindow& window) {
         tu.setFillColor(sf::Color::Black); tr.setFillColor(sf::Color::Black); tc.setFillColor(sf::Color::Black); tclose.setFillColor(sf::Color::White);
         window.draw(tu); window.draw(tr); window.draw(tc); window.draw(tclose);
 
-        // Show counts for stacks
         std::ostringstream sUndoCount; sUndoCount << "Undo: " << undoStack.size();
         std::ostringstream sRedoCount; sRedoCount << "Redo: " << redoStack.size();
         sf::Text sund(sUndoCount.str(), font, 12); sund.setPosition(panelX + 14.f, panelY + 80.f); sund.setFillColor(sf::Color::White);
         sf::Text sred(sRedoCount.str(), font, 12); sred.setPosition(panelX + 120.f, panelY + 80.f); sred.setFillColor(sf::Color::White);
         window.draw(sund); window.draw(sred);
 
-        // Draw history list (top = recent)
         auto hv = undoStack.toVector();
         float listTop = panelY + 104.f;
         float yp = listTop;
@@ -1161,7 +1077,6 @@ void createCity(sf::RenderWindow& window) {
             window.draw(t);
             yp += lineH;
         }
-        // If no history
         if (hv.empty()) {
             sf::Text t("(no actions yet)", font, 13);
             t.setFillColor(sf::Color(200, 200, 200));

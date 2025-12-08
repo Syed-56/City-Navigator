@@ -8,18 +8,11 @@
 
 int main()
 {
-    // Get desktop resolution
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
-
-    // Create fullscreen window
     sf::RenderWindow window(desktop, "City Navigator", sf::Style::Fullscreen);
-
-    // ============ MUSIC SETUP ============
     sf::Music backgroundMusic;
     
-    // Try to load background music
     if (backgroundMusic.openFromFile("song.mp3")) {
-        // Set music properties
         backgroundMusic.setLoop(true);
         backgroundMusic.setVolume(50.f);
         backgroundMusic.play();
@@ -28,15 +21,10 @@ int main()
     else {
         std::cerr << "Warning: Could not load song.mp3\n";
     }
-    // ====================================
-
-    // Initialize global textures
+   
     loadBuildingTextures();
-
-    // Initialize IntroScreen
     IntroScreen intro(window);
 
-    // Main loop
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {

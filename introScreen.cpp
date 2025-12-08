@@ -10,12 +10,10 @@ IntroScreen::IntroScreen(sf::RenderWindow& window) :
     navigatingCity(false), 
     city(nullptr) 
 {
-    // Load font
     if (!font.loadFromFile("arial.ttf")) {
         std::cerr << "Failed to load font!\n";
     }
 
-    // Load background image
     if (!backgroundTexture.loadFromFile("images/bg-introScreen.png")) {
         std::cerr << "Failed to load background image!\n";
     } else {
@@ -24,7 +22,6 @@ IntroScreen::IntroScreen(sf::RenderWindow& window) :
 
     sf::Vector2u windowSize = window.getSize();
 
-    // Scale background to fit window
     sf::Vector2u imageSize = backgroundTexture.getSize();
     float scaleX = float(windowSize.x) / imageSize.x;
     float scaleY = float(windowSize.y) / imageSize.y;

@@ -3,7 +3,6 @@
 #include "travelFunc.h"
 #include <math.h>
 
-// Global texture map
 std::map<std::string, sf::Texture> buildingTextures;
 
 void loadBuildingTextures() {
@@ -44,8 +43,8 @@ SampleCity::SampleCity() {
 
     // Travel button initialization
     const float btnWidth = 120.f, btnHeight = 40.f;
-    const float travelBtnX = 100.f;  // Position on left side
-    const float travelBtnY = 650.f;  // Position near bottom
+    const float travelBtnX = 100.f; 
+    const float travelBtnY = 650.f;  
     
     travelButton.setSize(sf::Vector2f(btnWidth, btnHeight));
     travelButton.setPosition(travelBtnX, travelBtnY);
@@ -60,16 +59,13 @@ SampleCity::SampleCity() {
     travelText.setPosition(travelBtnX + 28, travelBtnY + 8);
         // ==== ORGANIZED CITY MAP (OPTION A) ====
 
-    // Predefined building types
     std::vector<std::string> types = {
         "Park", "School", "Market", "Office", "Hospital", "Apartment"
     };
 
-    // Clear old locations just to be safe
     locations.clear();
     adjacencyList.clear();
 
-    // Helper lambda to add locations easily
     auto addLocation = [&](std::string name, std::string type, int x, int y) {
         sampleLocation loc;
         loc.name = name;
@@ -137,9 +133,7 @@ SampleCity::SampleCity() {
     addLocation("Elite Residency D", "Apartment", 600, 600);
     addLocation("Elite Residency E", "Apartment", 700, 600);
 
-    // ------- Automatic Adjacency Connections -------
     for (int i = 0; i < locations.size(); i++) {
-        // Connect each location with nearby ones (<200 px distance)
         for (int j = 0; j < locations.size(); j++) {
             if (i == j) continue;
 
@@ -152,7 +146,6 @@ SampleCity::SampleCity() {
         }
     }
 
-    // Build adjacencyList
     for (int i = 0; i < locations.size(); i++) {
         adjacencyList[i] = locations[i].neighbors;
     }
@@ -175,18 +168,15 @@ void SampleCity::handleEvent(sf::Event& event, bool& returnToMenu) {
             typingStart = typingEnd = false;
         }
         
-        // Travel popup handling
         else if (showTravelPopup) {
-            // Calculate popup position (centered)
             sf::Vector2f popupSize(400.f, 200.f);
-            sf::Vector2f popupPos(400.f, 300.f); // Adjust based on your window size
+            sf::Vector2f popupPos(400.f, 300.f);
             
             // Define rectangles
             sf::FloatRect startBoxRect(popupPos.x + 130, popupPos.y + 25, 200.f, 30.f);
             sf::FloatRect endBoxRect(popupPos.x + 130, popupPos.y + 75, 200.f, 30.f);
             sf::FloatRect submitBtnRect(popupPos.x + popupSize.x/2.f - 50.f, popupPos.y + 140, 100.f, 34.f);
             
-            // Check for input box focus
             if (startBoxRect.contains(mouse)) {
                 typingStart = true;
                 typingEnd = false;
@@ -203,10 +193,8 @@ void SampleCity::handleEvent(sf::Event& event, bool& returnToMenu) {
                     findLocationByName(endPoint) == -1) {
                     showErrorPopup = true;
                 } else {
-                    // Path finding logic here
                     std::cout << "Finding route: " << startPoint << " -> " << endPoint << "\n";
                     showTravelPopup = false;
-                    // You might want to show a path popup here
                 }
             }
         }
@@ -214,7 +202,7 @@ void SampleCity::handleEvent(sf::Event& event, bool& returnToMenu) {
         // Error popup close button
         else if (showErrorPopup) {
             sf::Vector2f errorSize(300.f, 120.f);
-            sf::Vector2f errorPos(350.f, 300.f); // Adjust based on your window size
+            sf::Vector2f errorPos(350.f, 300.f);
             sf::FloatRect closeBtnRect(errorPos.x + errorSize.x/2 - 40.f, errorPos.y + 70.f, 80.f, 30.f);
             
             if (closeBtnRect.contains(mouse)) {
@@ -223,7 +211,6 @@ void SampleCity::handleEvent(sf::Event& event, bool& returnToMenu) {
         }
     }
     
-    // Handle keyboard text input for travel popup
     if (showTravelPopup && event.type == sf::Event::TextEntered) {
         if (typingStart) {
             if (event.text.unicode == '\b') { // Backspace
@@ -252,7 +239,6 @@ void SampleCity::handleEvent(sf::Event& event, bool& returnToMenu) {
 }
 
 void SampleCity::update(sf::RenderWindow& window) {
-    // Check mouse position for hover
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     hoveredLocation = -1;
 
@@ -288,7 +274,6 @@ void SampleCity::draw(sf::RenderWindow& window) {
     window.draw(closeButton);
     window.draw(closeText);
     
-    // Draw travel button (only if no popups are open)
     if (!showTravelPopup && !showErrorPopup) {
         window.draw(travelButton);
         window.draw(travelText);
@@ -301,31 +286,27 @@ void SampleCity::draw(sf::RenderWindow& window) {
         label.setCharacterSize(10);
         label.setFillColor(sf::Color::Black);
     
-        // Position text on the LEFT of the icon
-        float offsetX = -20; // space to the left
-        float offsetY = -30; // above the icon
+        float offsetX = -20; 
+        float offsetY = -30;
     
-        // Calculate width to shift background correctly
         sf::FloatRect bounds = label.getLocalBounds();
         label.setPosition(
-            locations[hoveredLocation].x + offsetX - bounds.width, // shift left by text width
+            locations[hoveredLocation].x + offsetX - bounds.width, 
             locations[hoveredLocation].y + offsetY
         );
     
         // Create background box
         sf::RectangleShape bg;
         bg.setSize(sf::Vector2f(bounds.width + 10, bounds.height + 10));
-        bg.setFillColor(sf::Color(255, 255, 255, 220)); // white, slightly transparent
+        bg.setFillColor(sf::Color(255, 255, 255, 220)); 
         bg.setPosition(label.getPosition().x - 5, label.getPosition().y - 5);
         bg.setOutlineColor(sf::Color::Black);
         bg.setOutlineThickness(1);
     
-        // Draw background then text
         window.draw(bg);
         window.draw(label);
     }
     
-    // Create a Graph object from locations for the travel function
     Graph graph;
     
     // Add all locations as nodes to the graph
@@ -340,20 +321,17 @@ void SampleCity::draw(sf::RenderWindow& window) {
         graph.addNode(graphLoc);
     }
     
-    // Add edges (connections) to the graph based on neighbors
+    // Add edges to the graph based on neighbors
     for (size_t i = 0; i < locations.size(); i++) {
         for (int neighbor : locations[i].neighbors) {
-            // Add edge in both directions
             graph.addEdge(i, neighbor);
         }
     }
     
-    // Call the travel function to draw popups
     travel(window, graph, showTravelPopup, showErrorPopup, 
         startPoint, endPoint, typingStart, typingEnd,
         currentPath, showPath, window.getDefaultView());
 }
-// Graph utilities
 const std::vector<int>& SampleCity::getNeighbors(int index) const {
     return adjacencyList.at(index);
 }

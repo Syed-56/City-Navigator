@@ -12,21 +12,18 @@
 #include <chrono>
 #include "sampleCity.h"
 
-
-// ------------------ Data structures ------------------
-
 struct Location {
     int id;
     std::string name;
     std::string type;
     sf::Vector2f pos;
-    bool active = true; // inactive when undone (soft deletion)
+    bool active = true; 
 };
 
 class Graph {
 public:
     std::vector<Location> nodes;
-    std::vector<std::vector<int>> adj; // adjacency lists (store neighbor ids)
+    std::vector<std::vector<int>> adj; 
     std::unordered_map<std::string, int> name_to_id;
 
     int addNode(const Location& loc);
@@ -40,17 +37,15 @@ public:
     bool validIndex(int i) const;
 };
 
-// ------------------ Action + History (stack) ------------------
 
 enum class ActKind { AddNode, Connect };
 
 struct Action {
     ActKind kind;
-    std::string description;      // human readable
-    // payload
-    Location nodeSnapshot;        // used for AddNode (snapshot of the node)
-    int a = -1, b = -1;           // used for Connect (node ids)
-    std::shared_ptr<Action> next; // for linked-list stack
+    std::string description;      
+    Location nodeSnapshot;        
+    int a = -1, b = -1;           
+    std::shared_ptr<Action> next; 
     Action(ActKind k) : kind(k), description(""), nodeSnapshot({}), a(-1), b(-1), next(nullptr) {}
 };
 
@@ -58,7 +53,6 @@ class ActionHistory {
 public:
     std::shared_ptr<Action> head;
     void push(const std::shared_ptr<Action>& act);
-    // pop and return the top action; returns nullptr if empty
     std::shared_ptr<Action> pop();
     std::shared_ptr<Action> peek() const;
     std::vector<std::string> toVector() const;
