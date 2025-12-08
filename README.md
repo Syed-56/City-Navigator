@@ -1,5 +1,5 @@
 # City Navigator
-A C++ project using SFML to visualize Data Structures and Algorithms.
+A C++ project using SFML to visualize Data Structures and Algorithms. To Play: download from "https://github.com/Syed-56/City-Navigator/releases/download/v1.0.0/City-Navigator-v1.0.0.rar" and run City-Navigator.exe
 
 ## Features
 - Travel in a built-in City
